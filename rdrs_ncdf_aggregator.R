@@ -68,7 +68,7 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
   
   rlon_dim  <- ncdim_def( name = "rlon", units = "degree",vals =rlon)
   rlat_dim  <- ncdim_def( name = "rlat", units = "degree",vals =rlat)
-  time_dim  <- ncdim_def( name = "time", units = "time" , vals =1:length(Dates))
+  time_dim  <- ncdim_def( name = "time", units = "time" , vals =0:(length(Dates)-1))
   
   vars<-vector(mode = "list", length = 5+length(var)+ifelse(gp_var=="",0,1))
   vars[[1]] <- ncvar_def(name = "longitude"   , units = "degree", dim = list(rlon_dim),           missval = NaN,prec="double")
@@ -89,7 +89,7 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
     gph<-ncvar_get(nc_open(ncfiles[1]),gp_var)[,,1]
     geo2ele<-function(gph)  (gph*10*9.81)*6371000/(9.81*6371000-gph*10*9.81)
     gpe<-geo2ele(gph)
-    vars[[6+i]] <- ncvar_def(name = "Geopotential Elevation",
+    vars[[6+i]] <- ncvar_def(name = "Geopotential_Elevation",
                              units = "MASL",
                              dim = list(rlon_dim,rlat_dim),
                              missval = NaN,
