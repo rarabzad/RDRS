@@ -59,19 +59,19 @@ ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGeneri
 # Weights generation
 grids_weights_generator(ncdir = getwd(),
                         outdir = outdir,
-						hrufile = "./hru/finalcat_hru_info.shp",
-						HRU_ID = "HRU_ID")
+			hrufile = "./hru/finalcat_hru_info.shp",
+			HRU_ID = "HRU_ID")
 
 # Gridded Forcing aggregation
 rdrs_ncdf_aggregator(ncdir = getwd(),
                      outdir = outdir,
-					 outputfile = outputfile,
-					 shift = shift,
-					 aggregationLength = aggregationLength,
-					 var = var,
-					 var_units = var_units,
-					 var_names = var_names,
-					 fun = fun,
-					 gp_var = gp_var)
+		     outputfile = outputfile,
+		     shift = shift,
+		     aggregationLength = aggregationLength,
+ 		     var = var,
+		     var_units = var_units,
+		     var_names = var_names,
+		     fun = fun,
+		     gp_var = gp_var)
 
 ```
