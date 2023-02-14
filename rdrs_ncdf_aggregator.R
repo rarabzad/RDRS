@@ -75,7 +75,7 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
   vars[[2]] <- ncvar_def(name = "latitude"    , units = "degree", dim = list(rlat_dim),           missval = NaN,prec="double")
   vars[[3]] <- ncvar_def(name = "rotated lon" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
   vars[[4]] <- ncvar_def(name = "rotated lat" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
-  vars[[5]] <- ncvar_def(name = "TIME"        , units = "time"  , dim = list(time_dim)         ,  missval = NaN,prec="double")
+  vars[[5]] <- ncvar_def(name = "TIME"        , units = paste0("days since ",as.Date(substring(basename(ncfiles[1]),1,8),"%Y%m%d")," 00:00:00")  , dim = list(time_dim)         ,  missval = NaN,prec="double")
   for(i in 1:length(var))
   {
     vars[[5+i]] <- ncvar_def(name = var_names[i],
