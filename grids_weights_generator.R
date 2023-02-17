@@ -86,7 +86,7 @@ grids_weights_generator<-function(ncdir,outdir,hrufile,HRU_ID)
   }
   L1<-":GridWeights"
   L2<-sprintf(":NumberHRUs       %s",length(unique(weights_mat[,1])))
-  L3<-sprintf(":NumberGridCells       %s",length(unique(weights_mat[,2])))
+  L3<-sprintf(":NumberGridCells       %s",nlat*nlon)
   L4<-"# [HRU ID]  [Cell #]  [w_kl]"
   Lweights<-apply(weights_mat,1,paste,collapse="  ")
   Lend<-":EndGridWeights"
