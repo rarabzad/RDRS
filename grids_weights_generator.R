@@ -80,7 +80,7 @@ grids_weights_generator<-function(ncdir,outdir,hrufile,HRU_ID)
   colnames(weights_mat)<-c("HRU_ID","Cell_#","w_kl")
   for(i in 1:length(unique(grids_hru_data$`HRU_ID`)))
   {
-    tmp<-grids_hru_data[!is.na(match(grids_hru_data$`HRU ID`,unique(grids_hru_data$`HRU ID`)[i])),]
+    tmp<-grids_hru_data[!is.na(match(grids_hru_data$`HRU_ID`,unique(grids_hru_data$`HRU_ID`)[i])),]
     tmp$w_kl<-tmp$w_kl/sum(tmp$w_kl)
     weights_mat<-rbind(weights_mat,tmp)
   }
