@@ -47,7 +47,7 @@ grids_weights_generator<-function(ncdir,outdir,hrufile,HRU_ID)
       lat.tmp<-latlon.tmp$lat
       latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),1]<-lon.tmp
       latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),2]<-lat.tmp
-      latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),3]<-(jj-1)*nlon+ii
+      latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),3]<-(jj-1)*nlat+ii
     }
   }
   latlonc<-as.data.frame(latlonc)
