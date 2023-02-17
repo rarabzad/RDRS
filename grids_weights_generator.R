@@ -74,10 +74,10 @@ grids_weights_generator<-function(ncdir,outdir,hrufile,HRU_ID)
   grids_hru<-raster::intersect(grids,hru)
   grids_hru@data<-data.frame(grids_hru@data,area=area(grids_hru))
   grids_hru_data<-grids_hru@data[order(grids_hru@data$HRU_ID),c(2,1,3)]
-  colnames(grids_hru_data)<-c("HRU ID","Cell #","w_kl")
+  colnames(grids_hru_data)<-c("HRU_ID","Cell_#","w_kl")
   weights_mat<-matrix(NA,0,3)
-  colnames(weights_mat)<-c("HRU ID","Cell #","w_kl")
-  for(i in 1:length(unique(grids_hru_data$`HRU ID`)))
+  colnames(weights_mat)<-c("HRU_ID","Cell_#","w_kl")
+  for(i in 1:length(unique(grids_hru_data$`HRU_ID`)))
   {
     tmp<-grids_hru_data[!is.na(match(grids_hru_data$`HRU ID`,unique(grids_hru_data$`HRU ID`)[i])),]
     tmp$w_kl<-tmp$w_kl/sum(tmp$w_kl)
