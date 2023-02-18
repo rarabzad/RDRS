@@ -1,6 +1,7 @@
 rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,var,var_units,var_names,fun,gp_var)
 {
-  ncfiles<-list.files(ncdir,pattern = "*.nc",full.names = T)
+
+  ncfiles<-list.files(ncdir,pattern = "*.nc",full.names = T)
   nc<-nc_open(ncfiles[1])
   start<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[1])),"0000"))
   end<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[length(ncfiles)])),"0000"))+hours(23)
