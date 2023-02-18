@@ -5,11 +5,14 @@ In this section, two R functions will be called to generate the HRUs/RDRS grids 
 
 ``` r
 # loading main functions
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
-# download data
 dir.create("c:/rdrs")
 setwd("c:/rdrs")
+download.file("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
+download.file("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
+source("rdrs_ncdf_aggregator.R")
+source("grids_weights_generator.R")
+
+# download data
 download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
 download.file("https://github.com/rarabzad/RDRS/raw/main/hru.zip","hru.zip")
 unzip("data.zip")
