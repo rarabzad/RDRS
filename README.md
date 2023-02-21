@@ -25,7 +25,7 @@ var<-c("RDRS_v2.1_A_PR0_SFC",
        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
        "RDRS_v2.1_P_TT_1.5m")          # variables to aggregate
-gp_var<-"RDRS_v2.1_P_GZ_SFC"           # geo-potential variables name, set as gp_var<-"" when not applicable
+gp_var<-"RDRS_v2.1_P_GZ_SFC"           # geo-potential variables name, set as gp_var<-"" if not applicable
 var_names<-c("precipitation",
              "mean_temperature",
              "min_temperature",
