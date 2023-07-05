@@ -222,7 +222,6 @@ grids_weights_generator<-function(ncfile,
   writeOGR(latlon, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
   if(plot)
   {
-    windows(width = nlon*0.3,height = nlat*0.3)
     plot(grids,col="grey")
     points(latlonc[,-3],pch=19,cex=0.4,col="orange")
     points(c(lonRC),c(latRC),pch=19,cex=0.5,col="red")
