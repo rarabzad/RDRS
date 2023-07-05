@@ -190,7 +190,7 @@ grids_weights_generator<-function(ncfile,
   sf_obj <- st_as_sf(spdf, coords = c("lon", "lat"), crs = 4326, agr = "constant")
   grids<- as_Spatial(st_zm(st_sf(aggregate(sf_obj$geometry,list(sf_obj$group),function(g) st_cast(st_combine(g),"POLYGON")))))
   grids<-spTransform(grids,crs(hru)) # making sure gridlines and subbasin shapefiles have the same CRS
-  hru@data<-data.frame(HRU_ID=hru@data[,"HRU_ID"])
+  hru@data<-data.frame(HRU_ID=hru@data[,HRU_ID])
   hru<-spTransform(hru,crs(grids))
   grids_hru<-raster::intersect(grids,hru) # intersecting gridlines and subbasins shp file
   cat("calculating grid cells weight\n")
