@@ -233,4 +233,5 @@ grids_weights_generator<-function(ncfile,
            cex=c(1,1,1),
            bty="n")
   }
+  return(weights_mat)
 }
