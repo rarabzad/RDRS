@@ -97,28 +97,10 @@ grids_weights_generator<-function(ncfile,
   nlat <- dim(latRC)[1]
   rlat<-seq(range(latRC)[1],range(latRC)[2],length.out=nlat)
   rlon<-seq(range(lonRC)[1],range(lonRC)[2],length.out=nlon)
-  latc <- array(0, c(nlat+1, nlon+1))
-  lonc <- array(0, c(nlat+1, nlon+1))
+  latc <- array(NA, c(nlat+1, nlon+1))
+  lonc <- array(NA, c(nlat+1, nlon+1))
   dlat <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
   dlon <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
-  for(ii in 1:max(1,(nlat-1)))
-  {
-    for(jj in 1:max((nlon-1),1))
-    {
-      ii_1_id<-ifelse((ii+1)<=nlat,ifelse((ii+1)<1,1,ii+1),nlat)
-      jj_1_id<-ifelse((jj+1)<=nlon,ifelse((jj+1)<1,1,jj+1),nlon)
-      dlat[ii,jj] <- (latRC[ii_1_id,jj_1_id] - latRC[ii,jj])/2
-      dlon[ii,jj] <- (lonRC[ii_1_id,jj_1_id] - lonRC[ii,jj])/2
-    }
-    if(nlon>1) dlat[ii,nlon] <- (latRC[ii_1_id,nlon] - latRC[ii,nlon-1])/2
-    if(nlon>1) dlon[ii,nlon] <- (lonRC[ii_1_id,nlon] - lonRC[ii,nlon-1])/2
-  }
-  dlat<--rbind(dlat[1,],dlat)
-  dlon<--rbind(dlon[1,],dlon)
-  latc[min(2,nlat):nlat, min(2,nlon):nlon] <- latRC[min(2,nlat):nlat, min(2,nlon):(nlon)] + 
-                                              dlat[min(2,nlat):nlat, min(2,nlon):nlon]
-  lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):(nlon)] + 
-                                              dlon[min(2,nlat):nlat, min(2,nlon):nlon]
   sideRowFiller<-function(latc,lonc,nlat)
   {
     latc[1, ]        <- latc[2, ]    - ifelse(rep(nlat==2,ncol(latc)),dlat[1,1],latc[3, ]    - latc[2, ]) 
@@ -135,34 +117,91 @@ grids_weights_generator<-function(ncfile,
     lonc[, nlon+1] <- lonc[, nlon] + ifelse(rep(nlon==2,nrow(lonc)),dlon[1,1],lonc[, nlon] - lonc[, nlon-1])
     return(list(latc=latc,lonc=lonc))
   }
-  if(nrow(maskRC)>=2)
+  squareFiller<-function(latc,lonc,latRC,lonRC)
   {
-    latlonc<-sideRowFiller(latc,lonc,nlat)
-    latc<-latlonc$latc
-    lonc<-latlonc$lonc
-  }else{
-    latc[2,min(2,nlon):nlon] <- latc[1,min(2,nlon):nlon] + 
-                                dlat[1,min(2,nlon):nlon]
-    lonc[2,min(2,nlon):nlon] <- lonc[1,min(2,nlon):nlon] + 
-                                 dlon[1,min(2,nlon):nlon]
-    latlonc<-sideColFiller(latc,lonc,nlat)
-    latc<-latlonc$latc
-    lonc<-latlonc$lonc
+    move<-array(0,c(3,3,2))
+    dlatlon<-array(NA,c(3,3,4))
+    move[1:3,,1]<-1:-1
+    move[,1:3,2]<--1:1;move[,1:3,2]<-t(move[,1:3,2])
+    dlatlon[,1:3,1]<-t(matrix(apply(latRC,1,diff)[c(1,NA,2)],3,3))
+    dlatlon[,1:3,2]<-  matrix(apply(latRC,2,diff)[c(1,NA,2)],3,3)
+    dlatlon[,1:3,3]<-t(matrix(apply(lonRC,1,diff)[c(1,NA,2)],3,3))
+    dlatlon[,1:3,4]<-  matrix(apply(lonRC,2,diff)[c(1,NA,2)],3,3)
+    dlatlon[is.na(dlatlon)]<-0
+    latc<-mean(latRC)+dlatlon[,,1]*move[,,2]+dlatlon[,,2]*move[,,1]
+    lonc<-mean(lonRC)+dlatlon[,,3]*move[,,2]+dlatlon[,,4]*move[,,1]
+    return(list(latc=latc,lonc=lonc))
   }
-  if(ncol(maskRC)>=2)
+  
+  for(ii in 1:max(1,(nlat-1)))
   {
-    latlonc<-sideColFiller(latc,lonc,nlon)
-    latc<-latlonc$latc
-    lonc<-latlonc$lonc
-  }else{
-    latc[min(2,nlat):nlat, 2] <- latc[min(2,nlat):nlat, 1] + 
-      dlat[min(2,nlat):nlat, 1]
-    lonc[min(2,nlat):nlat, 2] <- lonc[min(2,nlat):nlat, 1] + 
-      dlon[min(2,nlat):nlat, 1]
-    latlonc<-sideRowFiller(latc,lonc,nlat)
-    latc<-latlonc$latc
-    lonc<-latlonc$lonc
+    for(jj in 1:max((nlon-1),1))
+    {
+      ii_1_id<-ifelse((ii+1)<=nlat,ifelse((ii+1)<1,1,ii+1),nlat)
+      jj_1_id<-ifelse((jj+1)<=nlon,ifelse((jj+1)<1,1,jj+1),nlon)
+      dlat[ii,jj] <- (latRC[ii_1_id,jj_1_id] - latRC[ii,jj])/2
+      dlon[ii,jj] <- (lonRC[ii_1_id,jj_1_id] - lonRC[ii,jj])/2
+    }
+    if(nlon>1) dlat[ii,nlon] <- (latRC[ii_1_id,nlon] - latRC[ii,nlon-1])/2
+    if(nlon>1) dlon[ii,nlon] <- (lonRC[ii_1_id,nlon] - lonRC[ii,nlon-1])/2
   }
+  dlat<--rbind(dlat[1,],dlat)
+  dlon<--rbind(dlon[1,],dlon)
+  latc[min(2,nlat):nlat, min(2,nlon):nlon] <- latRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
+                                              dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
+  lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
+                                              dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
+  
+  if(any(is.na(latc)) | any(is.na(lonc)))
+  {
+    if(nrow(maskRC)>2)
+    {
+      latlonc<-sideRowFiller(latc,lonc,nlat)
+      latc<-latlonc$latc
+      lonc<-latlonc$lonc
+    }else{
+      if(nrow(maskRC)==2)
+      {
+        latlonc<-squareFiller(latc,lonc,latRC,lonRC)
+        latc<-latlonc$latc
+        lonc<-latlonc$lonc
+      }else{
+        latc[2,min(2,nlon):nlon] <- latc[1,min(2,nlon):nlon] + 
+                                    dlat[1,min(2,nlon):nlon]
+        lonc[2,min(2,nlon):nlon] <- lonc[1,min(2,nlon):nlon] + 
+                                    dlon[1,min(2,nlon):nlon]
+        latlonc<-sideColFiller(latc,lonc,nlon)
+        latc<-latlonc$latc
+        lonc<-latlonc$lonc
+      }
+    }
+  }
+
+  if(any(is.na(latc)) | any(is.na(lonc)))
+  {
+    if(ncol(maskRC)>2)
+    {
+      latlonc<-sideColFiller(latc,lonc,nlon)
+      latc<-latlonc$latc
+      lonc<-latlonc$lonc
+    }else{
+      if(ncol(maskRC)==2)
+      {
+        latlonc<-squareFiller(latc,lonc,latRC,lonRC)
+        latc<-latlonc$latc
+        lonc<-latlonc$lonc
+      }else{
+        latc[min(2,nlat):nlat, 2] <- latc[min(2,nlat):nlat, 1] + 
+                                     dlat[min(2,nlat):nlat, 1]
+        lonc[min(2,nlat):nlat, 2] <- lonc[min(2,nlat):nlat, 1] + 
+                                     dlon[min(2,nlat):nlat, 1]
+        latlonc<-sideRowFiller(latc,lonc,nlat)
+        latc<-latlonc$latc
+        lonc<-latlonc$lonc
+      }
+    }
+  }
+  
   if(flag)
   {
     latc<-latc[2:3,2:3]
