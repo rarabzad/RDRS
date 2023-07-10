@@ -18,22 +18,20 @@
 #' @param ncfile NetCDF file (file path) of grid cells (*.nc extension expected)
 #' @param HRU_ID the name of the hrufile polygon which contains the HRU IDs (default is "HRU_ID")
 #' @param out output directory where the generated files will be stored
-
 #' @return \item{weights.txt}{a txt file in the Raven readable format with the number of HRUs, number of grid cells, and gridweights data frame.}
 #' @return \item{grids_polygons.shp}{shapefile of calculated grid cells}
 #' @return \item{grids_centroids.shp}{shapefile of calculated grid cells centroids}
 #' @return \item{grids_polygons.json}{a json file in the RavenView readable format of the calculated grid cells.}
-
+#' @return \item{weight matrix}{a data frame of grid cells weights}
 #' @export grids_weights_generator
 #' @importFrom raster crs shapefile aggregate crs intersect area
 #' @importFrom ncdf4 nc_open 
 #' @importFrom rgdal writeOGR 
 #' @importFrom sp SpatialPointsDataFrame CRS spTransform
-#' @importFrom grDevices windows
 #' @importFrom graphics points lines legend
 #' @importFrom gissr sort_points
-#' @importFrom sf st_buffer st_union st_make_valid st_make_valid st_as_sf st_transform st_contains as_Spatial st_zm st_sf st_cast st_combine
-
+#' @importFrom Hmisc approxExtrap
+#' @importFrom sf st_buffer st_union st_make_valid st_make_valid st_as_sf st_transform st_contains as_Spatial st_zm st_sf st_cast st_combine st_drop_geometry st_intersects
 #' @examples
 #' dir.create("c:/rdrs")
 #' setwd("c:/rdrs")
@@ -61,46 +59,6 @@ grids_weights_generator<-function(ncfile,
                                   HRU_ID="HRU_ID",
                                   plot=TRUE)
 {
-  cat("reading files\n")
-  if(!file.exists(ncfile))  stop("The provided file path doesn't exist!")
-  if(!file.exists(hrufile)) stop("The provided file path doesn't exist!")
-  HRU<-hru<-tryCatch({shapefile(hrufile)}, error = function(e){shapefile(hrufile)})
-  if(!(HRU_ID %in% colnames(HRU@data))) stop("The provided 'HRU_ID' doesn't exist in the 'hrufile' attributes!")
-  if(!dir.exists(outdir)) dir.create(outdir)
-  nc<-nc_open(ncfile)
-  lat<-ncvar_get(nc,"lat")
-  lon<-ncvar_get(nc,"lon")
-  HRU@data<-data.frame(HRU_ID=HRU@data[,HRU_ID])
-  HRU<-st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000)
-  latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
-                   coords = c("lon", "lat"),
-                   crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
-  latlon<-st_transform(latlon,st_crs(HRU))
-  cat("identifying lat/lon points within the subbasins buffer\n")
-  mask<-matrix(st_contains(HRU, latlon,sparse = F),nrow(lat),ncol(lat))
-  id<-which(mask,arr.ind = TRUE)
-  flag<-FALSE
-  if(nrow(id)==1)
-  {
-    id<-expand.grid(row=(id[1]-1):(id[1]+1),col=(id[2]-1):(id[2]+1))
-    flag<-TRUE
-  }
-  frame<-rbind(apply(id,2,min),apply(id,2,max))
-  frameR<-frame[1,1]:frame[2,1]
-  frameC<-frame[1,2]:frame[2,2]
-  maskRC<-mask[frameR,frameC,drop=FALSE]
-  maskRC<-ifelse(maskRC,1,NA)
-  cat("creating grid lines by moving lat/lon centroids to the corners\n")
-  latRC<-lat[frameR,frameC,drop=F]
-  lonRC<-lon[frameR,frameC,drop=F]
-  nlon <- dim(lonRC)[2]
-  nlat <- dim(latRC)[1]
-  rlat<-seq(range(latRC)[1],range(latRC)[2],length.out=nlat)
-  rlon<-seq(range(lonRC)[1],range(lonRC)[2],length.out=nlon)
-  latc <- array(NA, c(nlat+1, nlon+1))
-  lonc <- array(NA, c(nlat+1, nlon+1))
-  dlat <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
-  dlon <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
   sideRowFiller<-function(latc,lonc,nlat)
   {
     latc[1, ]        <- latc[2, ]    - ifelse(rep(nlat==2,ncol(latc)),dlat[1,1],latc[3, ]    - latc[2, ]) 
@@ -133,6 +91,110 @@ grids_weights_generator<-function(ncfile,
     return(list(latc=latc,lonc=lonc))
   }
   
+  cat("reading files...\n")
+  if(!file.exists(ncfile))  stop("The provided file path doesn't exist!")
+  if(!file.exists(hrufile)) stop("The provided file path doesn't exist!")
+  HRU<-hru<-tryCatch({shapefile(hrufile)}, error = function(e){shapefile(hrufile)})
+  if(!(HRU_ID %in% colnames(HRU@data))) stop("The provided 'HRU_ID' doesn't exist in the 'hrufile' attributes!")
+  if(!dir.exists(outdir)) dir.create(outdir)
+  nc<-nc_open(ncfile)
+  lat<-ncvar_get(nc,"lat")
+  lon<-ncvar_get(nc,"lon")
+  HRU@data<-data.frame(HRU_ID=HRU@data[,HRU_ID])
+  HRU<-st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000)
+  latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
+                   coords = c("lon", "lat"),
+                   crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+  latlon<-st_transform(latlon,st_crs(HRU))
+  cat("identifying lat/lon points within the subbasins buffer...\n")
+  mask<-matrix(st_contains(HRU, latlon,sparse = F),nrow(lat),ncol(lat))
+  latlon<-st_transform(latlon,st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+  if(!any(mask)) stop("No overlap between the *.nc file and the provided hru file!")
+  id<-which(mask,arr.ind = TRUE)
+  xyz<-data.frame(x=lon[which(mask)],y=lat[which(mask)],z=which(mask)-1)
+  xyz<-st_as_sf(xyz,coords=c("x","y"),crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+  flagSquare<-FALSE
+  if(nrow(id)==1)
+  {
+    id<-expand.grid(row=(id[1]-1):(id[1]+1),col=(id[2]-1):(id[2]+1))
+    flagSquare<-TRUE
+  }
+  flagColRow<-0
+  if(any(apply(apply(id,2,unique),2,length)==1))
+  {
+    if(names(which(apply(apply(id,2,unique),2,length)==1))=="col")
+    {
+      col<-(unique(id[,2])-1):(unique(id[,2])+1)
+      colExistance<-col %in% 1:dim(mask)[2]
+      col<-col[colExistance]
+      id<-expand.grid(row=id[,1],col=col)
+      flagColRow<-1
+    }else{
+      row<-(unique(id[,1])-1):(unique(id[,1])+1)
+      rowExistance<-row %in% 1:dim(mask)[1]
+      row<-row[rowExistance]
+      id<-expand.grid(row=row,col=id[,2])
+      flagColRow<-2
+    }
+  }
+  frame<-rbind(apply(id,2,min),apply(id,2,max))
+  frameR<-frame[1,1]:frame[2,1]
+  frameC<-frame[1,2]:frame[2,2]
+  maskRC<-mask[frameR,frameC,drop=FALSE]
+  maskRC<-ifelse(maskRC,1,NA)
+  cat("creating grid lines by moving lat/lon centroids to the corners\n")
+  latRC<-lat[frameR,frameC,drop=F]
+  lonRC<-lon[frameR,frameC,drop=F]
+  if(flagColRow != 0)
+  {
+    if(flagColRow == 1)
+    {
+      if(sum(colExistance)==2)
+      {
+        latRC<-if(which(!colExistance)==1) cbind(latRC[,1]-abs(apply(latRC,1,diff)),latRC) else cbind(latRC,latRC[,2]+abs(apply(latRC,1,diff)))
+        lonRC<-if(which(!colExistance)==1) cbind(lonRC[,1]-abs(apply(lonRC,1,diff)),lonRC) else cbind(lonRC,lonRC[,2]+abs(apply(lonRC,1,diff)))
+      }
+      if(sum(colExistance)==1)
+      {
+        y<-abs(apply(latRC,2,diff))
+        x<-1:length(y)
+        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+        latRC<-cbind(latRC-y,latRC,latRC+y)
+        y<-abs(apply(lonRC,2,diff))
+        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+        lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
+      }
+    }
+    if(flagColRow == 2)
+    {
+      if(sum(rowExistance)==2)
+      {
+        latRC<-if(which(!rowExistance)==1) rbind(latRC[1,]-abs(apply(latRC,2,diff)),latRC) else rbind(latRC,latRC[2,]+abs(apply(latRC,2,diff)))
+        lonRC<-if(which(!rowExistance)==1) rbind(lonRC[1,]-abs(apply(lonRC,2,diff)),lonRC) else rbind(lonRC,lonRC[2,]+abs(apply(lonRC,2,diff)))
+      }
+      if(sum(rowExistance)==1)
+      {
+        y<-abs(apply(latRC,1,diff))
+        x<-1:length(y)
+        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+        latRC<-rbind(latRC-y,latRC,latRC+y)
+        y<-abs(apply(lonRC,1,diff))
+        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+        lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
+      }
+    }
+    frame<-rbind(apply(id,2,min),apply(id,2,max))
+    frameR<-frame[1,1]:frame[2,1]
+    frameC<-frame[1,2]:frame[2,2]
+    maskRC<-mask[frameR,frameC,drop=FALSE]
+    maskRC<-ifelse(maskRC,1,NA)
+  }
+  nlon <- dim(lonRC)[2]
+  nlat <- dim(latRC)[1]
+  latc <- array(NA, c(nlat+1, nlon+1))
+  lonc <- array(NA, c(nlat+1, nlon+1))
+  dlat <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
+  dlon <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
   for(ii in 1:max(1,(nlat-1)))
   {
     for(jj in 1:max((nlon-1),1))
@@ -151,7 +213,6 @@ grids_weights_generator<-function(ncfile,
                                               dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
   lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
                                               dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
-  
   if(any(is.na(latc)) | any(is.na(lonc)))
   {
     if(nrow(maskRC)>2)
@@ -176,7 +237,6 @@ grids_weights_generator<-function(ncfile,
       }
     }
   }
-
   if(any(is.na(latc)) | any(is.na(lonc)))
   {
     if(ncol(maskRC)>2)
@@ -201,12 +261,25 @@ grids_weights_generator<-function(ncfile,
       }
     }
   }
-  
-  if(flag)
+  if(flagColRow==1)
   {
-    latc<-latc[2:3,2:3]
-    lonc<-lonc[2:3,2:3]
+    latc<-latc[,2:3]
+    lonc<-lonc[,2:3]
+    latRC<-latRC[,2,drop=FALSE]
+    lonRC<-lonRC[,2,drop=FALSE]
+    nlon <- dim(lonRC)[2]
+    nlat <- dim(latRC)[1]
   }
+  if(flagColRow==2)
+  {
+    latc<-latc[2:3,]
+    lonc<-lonc[2:3,]
+    latRC<-latRC[2,,drop=FALSE]
+    lonRC<-lonRC[2,,drop=FALSE]
+    nlon <- dim(lonRC)[2]
+    nlat <- dim(latRC)[1]
+  }
+  if(flagSquare)    {latc<-latc[2:3,2:3];lonc<-lonc[2:3,2:3]}
   latlonc<-matrix(NA,sum((dim(latc)-2)*4)+4+prod(dim(latc)-2)*4,3)
   colnames(latlonc)<-c("lon","lat","group")
   for(ii in 1:nlat)
@@ -228,10 +301,12 @@ grids_weights_generator<-function(ncfile,
   spdf <- SpatialPointsDataFrame(latlonc, latlonc[,3,drop=F], proj4string=CRS("+proj=longlat"))
   sf_obj <- st_as_sf(spdf, coords = c("lon", "lat"), crs = 4326, agr = "constant")
   grids<- as_Spatial(st_zm(st_sf(aggregate(sf_obj$geometry,list(sf_obj$group),function(g) st_cast(st_combine(g),"POLYGON")))))
+  centroids_grids_overlap<-st_intersects(st_as_sf(grids),xyz)
+  grids@data$Group.1<-st_drop_geometry(xyz)$z[unlist(centroids_grids_overlap)]
   grids<-spTransform(grids,crs(hru)) # making sure gridlines and subbasin shapefiles have the same CRS
   hru@data<-data.frame(HRU_ID=hru@data[,HRU_ID])
-  hru<-spTransform(hru,crs(grids))
   grids_hru<-raster::intersect(grids,hru) # intersecting gridlines and subbasins shp file
+  if(!all(hru$HRU_ID %in% unique(grids_hru@data$HRU_ID))) warning("Grid cells do not cover or partially cover the HRUs!")
   cat("calculating grid cells weight\n")
   grids_hru@data<-data.frame(grids_hru@data,area=area(grids_hru))
   grids_hru_data<-grids_hru@data[order(grids_hru@data$HRU_ID),c(2,1,3)]
@@ -253,23 +328,42 @@ grids_weights_generator<-function(ncfile,
   Lend<-":EndGridWeights"
   weights_mat_data<-c(L1,L2,L3,L4,Lweights,Lend)
   writeLines(weights_mat_data,paste0(outdir,"/weights.txt"))
+  grids<-spTransform(grids,crs(latlon))
+  hru<-spTransform(hru,crs(latlon))
   grids@data<-data.frame(Cell_ID=grids@data$Group.1)
   writeOGR(grids, dsn=outdir, layer="grids_polygons", driver="ESRI Shapefile",overwrite=TRUE)
   writeOGR(grids, dsn=paste0(gsub("/","\\\\",outdir),"\\grids_polygons.json"), "GeoJSON", driver="GeoJSON",overwrite=TRUE)
-  latlon<-SpatialPointsDataFrame(coords=cbind(lat=c(latRC),lon=c(lonRC)),data=data.frame(id=1:prod(dim(latRC))))
-  crs(latlon)<-crs(grids)
-  writeOGR(latlon, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
+  latlonCentroids<-st_as_sf(data.frame(lon=c(lonRC),lat=c(latRC)),
+                            coords = c("lon", "lat"),
+                            crs = st_crs(latlon))
+  st_crs(latlonCentroids)<-st_crs(latlon)
+  latlonCentroids<-as_Spatial(st_transform(st_transform(latlonCentroids,st_crs(HRU)),st_crs(latlonCentroids)))
+  latlonCentroids@data<-data.frame(Cell_ID=which(mask)-1)
+  writeOGR(latlonCentroids, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
   if(plot)
   {
-    plot(grids,col="grey")
-    points(latlonc[,-3],pch=19,cex=0.4,col="orange")
-    points(c(lonRC),c(latRC),pch=19,cex=0.5,col="red")
-    lines(hru,col="white")
+    plot(grids,col="lightgrey")
+    spdf<-spTransform(spTransform(spdf,crs(HRU)),crs(spdf))
+    points(spdf,pch=19,cex=0.4,col="orange")
+    points(latlonCentroids,pch=19,cex=0.5,col="red")
+    lines(hru,col="white",lwd=2)
+    x_range <- par()$usr[1:2]
+    y_range <- par()$usr[3:4]
+    x_scale <- diff(x_range) / 5
+    y_scale <- diff(y_range) / 5
+    ruler_x <- seq(x_range[1], x_range[2], by = x_scale)
+    ruler_y <- seq(y_range[1], y_range[2], by = y_scale)
+    axis(1, at = ruler_x, labels = FALSE, tck = -0.02)
+    axis(2, at = ruler_y, labels = FALSE, tck = -0.02)
+    mtext(round(ruler_x, 1), side = 1, at = ruler_x, line = 1, cex = 0.7,las=2)
+    mtext(round(ruler_y, 1), side = 2, at = ruler_y, line = 1, cex = 0.7,las=2)
+    abline(v=ruler_x,col="green",lty=2)
+    abline(h=ruler_y,col="green",lty=2)
     legend("topleft",
            legend = c("grid","centroid","corner"),
            pch=c(4,19,19),
            col=c("black","red","orange"),
-           cex=c(1,1,1),
+           cex=c(.7,.7,.7),
            bty="n")
   }
   return(weights_mat)
