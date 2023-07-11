@@ -111,8 +111,6 @@ grids_weights_generator<-function(ncfile,
   latlon<-st_transform(latlon,st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
   if(!any(mask)) stop("No overlap between the *.nc file and the provided hru file!")
   id<-which(mask,arr.ind = TRUE)
-  xyz<-data.frame(x=lon[which(mask)],y=lat[which(mask)],z=which(mask)-1)
-  xyz<-st_as_sf(xyz,coords=c("x","y"),crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
   flagSquare<-FALSE
   if(nrow(id)==1)
   {
@@ -207,12 +205,18 @@ grids_weights_generator<-function(ncfile,
     if(nlon>1) dlat[ii,nlon] <- (latRC[ii_1_id,nlon] - latRC[ii,nlon-1])/2
     if(nlon>1) dlon[ii,nlon] <- (lonRC[ii_1_id,nlon] - lonRC[ii,nlon-1])/2
   }
+  frameRC<-expand.grid(row=frameR,col=frameC)
+  z<-(frameRC[,2]-1)*nrow(lat)+frameRC[,1]
+  xyz<-data.frame(x=lon[z],y=lat[z],z=z-1)
+  xyz<-st_as_sf(xyz,
+                coords=c("x","y"),
+                crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
   dlat<--rbind(dlat[1,],dlat)
   dlon<--rbind(dlon[1,],dlon)
   latc[min(2,nlat):nlat, min(2,nlon):nlon] <- latRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
-                                              dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
+    dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
   lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
-                                              dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
+    dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
   if(any(is.na(latc)) | any(is.na(lonc)))
   {
     if(nrow(maskRC)>2)
@@ -228,9 +232,9 @@ grids_weights_generator<-function(ncfile,
         lonc<-latlonc$lonc
       }else{
         latc[2,min(2,nlon):nlon] <- latc[1,min(2,nlon):nlon] + 
-                                    dlat[1,min(2,nlon):nlon]
+          dlat[1,min(2,nlon):nlon]
         lonc[2,min(2,nlon):nlon] <- lonc[1,min(2,nlon):nlon] + 
-                                    dlon[1,min(2,nlon):nlon]
+          dlon[1,min(2,nlon):nlon]
         latlonc<-sideColFiller(latc,lonc,nlon)
         latc<-latlonc$latc
         lonc<-latlonc$lonc
@@ -252,9 +256,9 @@ grids_weights_generator<-function(ncfile,
         lonc<-latlonc$lonc
       }else{
         latc[min(2,nlat):nlat, 2] <- latc[min(2,nlat):nlat, 1] + 
-                                     dlat[min(2,nlat):nlat, 1]
+          dlat[min(2,nlat):nlat, 1]
         lonc[min(2,nlat):nlat, 2] <- lonc[min(2,nlat):nlat, 1] + 
-                                     dlon[min(2,nlat):nlat, 1]
+          dlon[min(2,nlat):nlat, 1]
         latlonc<-sideRowFiller(latc,lonc,nlat)
         latc<-latlonc$latc
         lonc<-latlonc$lonc
@@ -302,6 +306,12 @@ grids_weights_generator<-function(ncfile,
   sf_obj <- st_as_sf(spdf, coords = c("lon", "lat"), crs = 4326, agr = "constant")
   grids<- as_Spatial(st_zm(st_sf(aggregate(sf_obj$geometry,list(sf_obj$group),function(g) st_cast(st_combine(g),"POLYGON")))))
   centroids_grids_overlap<-st_intersects(st_as_sf(grids),xyz)
+  non_overlapping_cells<-unlist(lapply(centroids_grids_overlap,length))==0
+  if(any(non_overlapping_cells))
+  {
+    grids<-grids[which(!non_overlapping_cells),]
+    centroids_grids_overlap<-st_intersects(st_as_sf(grids),xyz)
+  }
   grids@data$Group.1<-st_drop_geometry(xyz)$z[unlist(centroids_grids_overlap)]
   grids<-spTransform(grids,crs(hru)) # making sure gridlines and subbasin shapefiles have the same CRS
   hru@data<-data.frame(HRU_ID=hru@data[,HRU_ID])
@@ -333,12 +343,9 @@ grids_weights_generator<-function(ncfile,
   grids@data<-data.frame(Cell_ID=grids@data$Group.1)
   writeOGR(grids, dsn=outdir, layer="grids_polygons", driver="ESRI Shapefile",overwrite=TRUE)
   writeOGR(grids, dsn=paste0(gsub("/","\\\\",outdir),"\\grids_polygons.json"), "GeoJSON", driver="GeoJSON",overwrite=TRUE)
-  latlonCentroids<-st_as_sf(data.frame(lon=c(lonRC),lat=c(latRC)),
-                            coords = c("lon", "lat"),
-                            crs = st_crs(latlon))
-  st_crs(latlonCentroids)<-st_crs(latlon)
+  latlonCentroids<-xyz
   latlonCentroids<-as_Spatial(st_transform(st_transform(latlonCentroids,st_crs(HRU)),st_crs(latlonCentroids)))
-  latlonCentroids@data<-data.frame(Cell_ID=which(mask)-1)
+  latlonCentroids@data<-data.frame(Cell_ID=latlonCentroids@data$z)
   writeOGR(latlonCentroids, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
   if(plot)
   {
