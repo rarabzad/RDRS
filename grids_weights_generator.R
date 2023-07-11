@@ -118,9 +118,10 @@ grids_weights_generator<-function(ncfile,
     flagSquare<-TRUE
   }
   flagColRow<-0
-  if(any(apply(apply(id,2,unique),2,length)==1))
+  colRowCheck<-apply(apply(id,2,duplicated)[-1,,drop=FALSE],2,all)
+  if(any(colRowCheck))
   {
-    if(names(which(apply(apply(id,2,unique),2,length)==1))=="col")
+    if(names(which(colRowCheck))=="col")
     {
       col<-(unique(id[,2])-1):(unique(id[,2])+1)
       colExistance<-col %in% 1:dim(mask)[2]
