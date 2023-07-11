@@ -375,4 +375,5 @@ grids_weights_generator<-function(ncfile,
            bty="n")
   }
   return(weights_mat)
+  nc_close(nc)
 }
