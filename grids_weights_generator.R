@@ -77,17 +77,111 @@ grids_weights_generator<-function(ncfile,
   }
   squareFiller<-function(latc,lonc,latRC,lonRC)
   {
-    move<-array(0,c(3,3,2))
-    dlatlon<-array(NA,c(3,3,4))
-    move[1:3,,1]<-1:-1
-    move[,1:3,2]<--1:1;move[,1:3,2]<-t(move[,1:3,2])
-    dlatlon[,1:3,1]<-t(matrix(apply(latRC,1,diff)[c(1,NA,2)],3,3))
-    dlatlon[,1:3,2]<-  matrix(apply(latRC,2,diff)[c(1,NA,2)],3,3)
-    dlatlon[,1:3,3]<-t(matrix(apply(lonRC,1,diff)[c(1,NA,2)],3,3))
-    dlatlon[,1:3,4]<-  matrix(apply(lonRC,2,diff)[c(1,NA,2)],3,3)
-    dlatlon[is.na(dlatlon)]<-0
-    latc<-mean(latRC)+dlatlon[,,1]*move[,,2]+dlatlon[,,2]*move[,,1]
-    lonc<-mean(lonRC)+dlatlon[,,3]*move[,,2]+dlatlon[,,4]*move[,,1]
+    move<-array(0,c(dim(latc),4))
+    dlatlon<-array(NA,c(dim(latc),4))
+    if(mean(apply(latRC,1,diff))>0){move[,1,1]<--1 ;move[,ncol(move),1]<-1}else{move[,1,1]<-1 ;move[,ncol(move),1]<--1}
+    if(mean(apply(latRC,2,diff))>0){move[1,,2]<--1 ;move[nrow(move),,2]<-1}else{move[1,,2]<-1 ;move[nrow(move),,2]<--1}
+    if(mean(apply(lonRC,1,diff))>0){move[,1,3]<--1 ;move[,ncol(move),3]<-1}else{move[,1,3]<-1 ;move[,ncol(move),3]<--1}
+    if(mean(apply(lonRC,2,diff))>0){move[1,,4]<--1 ;move[nrow(move),,4]<-1}else{move[1,,4]<-1 ;move[nrow(move),,4]<--1}
+    if(all(dim(latc)==3))
+    {
+      lat_colDiff<-apply(latRC,1,diff)
+      lat_colDiff<-c(lat_colDiff[1],lat_colDiff)
+      lat_colDiff<-cbind(lat_colDiff,NA,lat_colDiff,deparse.level = 0)
+      lat_rowDiff<-apply(latRC,2,diff)
+      lat_rowDiff<-c(lat_rowDiff[1],lat_rowDiff)
+      lat_rowDiff<-rbind(lat_rowDiff,NA,lat_rowDiff,deparse.level = 0)
+      lon_colDiff<-apply(lonRC,1,diff)
+      lon_colDiff<-c(lon_colDiff[1],lon_colDiff)
+      lon_colDiff<-cbind(lon_colDiff,NA,lon_colDiff,deparse.level = 0)
+      lon_rowDiff<-apply(lonRC,2,diff)
+      lon_rowDiff<-c(lon_rowDiff[1],lon_rowDiff)
+      lon_rowDiff<-rbind(lon_rowDiff,NA,lon_rowDiff,deparse.level = 0)
+      dlatlon[,,1]<-lat_colDiff
+      dlatlon[,,2]<-lat_rowDiff
+      dlatlon[,,3]<-lon_colDiff
+      dlatlon[,,4]<-lon_rowDiff
+      dlatlon<-abs(dlatlon)
+      dlatlon[is.na(dlatlon)]<-0
+      latc<-mean(latRC)+dlatlon[,,1]*move[,,1]+dlatlon[,,2]*move[,,2]
+      lonc<-mean(lonRC)+dlatlon[,,3]*move[,,3]+dlatlon[,,4]*move[,,4]
+    }else{
+      if(which(dim(latc)==3)==1)
+      {
+        lat_colDiff<-apply(latRC,1,diff)
+        lat_colDiff<-rbind(lat_colDiff[1,],lat_colDiff)
+        lat_colDiff<-cbind(lat_colDiff[,1],
+                           matrix(NA,nrow(dlatlon),ncol(dlatlon)-2),
+                           lat_colDiff[,ncol(lat_colDiff)])
+        lat_rowDiff<-apply(latRC,2,diff)
+        lat_rowDiff<-c(lat_rowDiff[1],lat_rowDiff)
+        lat_rowDiff<-rbind(lat_rowDiff,NA,lat_rowDiff,deparse.level = 0)
+        lon_colDiff<-apply(lonRC,1,diff)
+        lon_colDiff<-rbind(lon_colDiff[1,],lon_colDiff)
+        lon_colDiff<-cbind(lon_colDiff[,1],
+                           matrix(NA,nrow(dlatlon),ncol(dlatlon)-2),
+                           lon_colDiff[,ncol(lon_colDiff)])
+        lon_rowDiff<-apply(lonRC,2,diff)
+        lon_rowDiff<-c(lon_rowDiff[1],lon_rowDiff)
+        lon_rowDiff<-rbind(lon_rowDiff,NA,lon_rowDiff,deparse.level = 0)
+        
+        dlatlon[,,1]<-lat_colDiff
+        dlatlon[,,2]<-lat_rowDiff
+        dlatlon[,,3]<-lon_colDiff
+        dlatlon[,,4]<-lon_rowDiff
+        dlatlon<-abs(dlatlon)
+      }else{
+        lat_colDiff<-apply(latRC,1,diff)
+        lat_colDiff<-c(lat_colDiff[1],lat_colDiff)
+        lat_colDiff<-cbind(lat_colDiff,NA,lat_colDiff,deparse.level = 0)
+        lat_rowDiff<-apply(latRC,2,diff)
+        lat_rowDiff<-cbind(lat_rowDiff[,1],lat_rowDiff)
+        lat_rowDiff<-rbind(lat_rowDiff[1,],
+                           matrix(NA,nrow(move)-2,ncol(move)),
+                           lat_rowDiff[nrow(lat_rowDiff),],
+                           deparse.level = 0)
+        lon_colDiff<-apply(lonRC,1,diff)
+        lon_colDiff<-c(lon_colDiff[1],lon_colDiff)
+        lon_colDiff<-cbind(lon_colDiff,NA,lon_colDiff,deparse.level = 0)
+        lon_rowDiff<-apply(lonRC,2,diff)
+        lon_rowDiff<-cbind(lon_rowDiff[,1],lon_rowDiff)
+        lon_rowDiff<-rbind(lon_rowDiff[1,],
+                           matrix(NA,nrow(move)-2,ncol(move)),
+                           lon_rowDiff[nrow(lon_rowDiff),],
+                           deparse.level = 0)
+        dlatlon[,,1]<-lat_colDiff
+        dlatlon[,,2]<-lat_rowDiff
+        dlatlon[,,3]<-lon_colDiff
+        dlatlon[,,4]<-lon_rowDiff
+        dlatlon<-abs(dlatlon)
+      }
+      dlatlon[is.na(dlatlon)]<-0
+      nonna_cells<-which(!is.na(latc),arr.ind = T)
+      a<-0
+      for(i in 1:nrow(latc))
+      {
+        for(j in 1:ncol(latc))
+        {
+          if(is.na(latc[i,j]))
+          {
+            neighbour_cells<-nonna_cells[which.min(abs(nonna_cells[,1]-i)+abs(nonna_cells[,2]-j)),,drop=FALSE]
+            lonc_tmp<-latc_tmp<-rep(NA,nrow(neighbour_cells))
+            for(k in 1:nrow(neighbour_cells))
+            {
+              latc_tmp[k]<-latc[neighbour_cells[k,1],neighbour_cells[k,2]]+
+                            dlatlon[i,j,1]*move[i,j,1]+
+                            dlatlon[i,j,2]*move[i,j,2]
+              lonc_tmp[k]<-lonc[neighbour_cells[k,1],neighbour_cells[k,2]]+
+                            dlatlon[i,j,3]*move[i,j,3]+
+                            dlatlon[i,j,4]*move[i,j,4]
+              a<-a+1
+            }
+            latc[i,j]<-mean(latc_tmp)
+            lonc[i,j]<-mean(lonc_tmp)
+          }
+        }
+      }
+    }
     return(list(latc=latc,lonc=lonc))
   }
   
