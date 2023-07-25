@@ -20,7 +20,7 @@
 #' @examples
 #' dir.create("c:/rdrs")
 #' setwd("c:/rdrs")
-#' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
+#' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncvar_add.R")
 #' # download data
 #' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
 #' unzip("data.zip")
