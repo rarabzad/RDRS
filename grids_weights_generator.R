@@ -194,8 +194,8 @@ grids_weights_generator<-function(ncfile,
   nc<-nc_open(ncfile)
   lat<-ncvar_get(nc,"lat")
   lon<-ncvar_get(nc,"lon")
-  HRU@data<-data.frame(HRU_ID=HRU@data[,HRU_ID])
-  HRU<-st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000)
+  cat("creating buffer around the HRU file...\n")
+  HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.1))})
   latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
                    coords = c("lon", "lat"),
                    crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
