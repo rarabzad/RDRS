@@ -25,6 +25,7 @@
 #' @return \item{weight matrix}{a data frame of grid cells weights}
 #' @export grids_weights_generator
 #' @importFrom raster crs shapefile aggregate crs intersect area
+#' @importFrom rgeos gbuffer
 #' @importFrom ncdf4 nc_open 
 #' @importFrom rgdal writeOGR 
 #' @importFrom sp SpatialPointsDataFrame CRS spTransform
