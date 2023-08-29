@@ -44,6 +44,7 @@ aggregationFactor<-c(1000,1,1,1)       # meter 2 mm conversion factor, degree co
 
 # Loading required packages
 ifelse("ncdf4"          %in% rownames(installed.packages()),library(ncdf4),         install.packages("ncdf4"))
+ifelse("rgeos"          %in% rownames(installed.packages()),library(rgeos),         install.packages("rgeos"))
 ifelse("sp"             %in% rownames(installed.packages()),library(sp),            install.packages("sp"))
 ifelse("sf"             %in% rownames(installed.packages()),library(sf),            install.packages("sf"))
 ifelse("devtools"       %in% rownames(installed.packages()),library(devtools),      install.packages("devtools"))
