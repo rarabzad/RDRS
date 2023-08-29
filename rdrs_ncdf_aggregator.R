@@ -1,3 +1,64 @@
+#' @title RDRS hourly time series aggregator
+#'
+#' @description
+#' This function is designed for aggregating hourly RDRS NetCDF files.
+#' @param ncdir Directory where NetCDF files are located
+#' @param outdir Directory where the output NetCDF file will be saved
+#' @param outputfile The name of the output NetCDF file
+#' @param shift A time shift in hours
+#' @param aggregationLength aggregation length in hour, i.e. 24 for aggregation to dailly scale and 168 for weekly scale
+#' @param var A vector of variable names to be aggregated (duplication is allowed)
+#' @param var_units Units associated with the variables
+#' @param var_names Names for the variables in the output NetCDF file
+#' @param fun A vector specifying aggregation functions (sum, mean, min, max) corresponding for each variable
+#' @param gp_var the name of the Geoppotential height variable
+#' @return a time aggregated NetCDF file saved in the \code{outputfile}
+#' @export rdrs_ncdf_aggregator
+#' @importFrom lubridate ymd_hms floor_date
+#' @importFrom ncdf4 nc_open nc_close ncvar_get ncdim_def ncvar_def nc_create ncvar_put
+#' @importFrom progress progress_bar
+#' @examples
+#' dir.create("c:/rdrs")
+#' setwd("c:/rdrs")
+#' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
+#' # download data
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
+#' unzip("data.zip")
+#' ncdir<-getwd()                         # directory where NetCDFs are stored
+#' outdir<-paste0(getwd(),"/output/")     # output directory
+#' dir.create(outdir)
+#' outputfile<- "RavenInput.nc"           # output *.nc file name
+#' var<-c("RDRS_v2.1_A_PR0_SFC",
+#'        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
+#'        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
+#'        "RDRS_v2.1_P_TT_1.5m")          # variables to aggregate
+#' gp_var<-"RDRS_v2.1_P_GZ_SFC"           # geo-potential variables name, set as gp_var<-"" if not applicable
+#' var_names<-c("precipitation",
+#'              "mean_temperature",
+#'              "min_temperature",
+#'              "max_temperature")        # variables names to be written in the nc file
+#' var_units<-c("mm",
+#'              "degC",
+#'              "degC",
+#'              "degC")                   # variables units to be written in the nc file
+#' fun<-c("sum",
+#'        "mean",
+#'        "min",
+#'        "max")                          # aggregation operators
+#' shift<-8                               # Hours
+#' aggregationLength<-24                  # Hours
+#' aggregationFactor<-c(1000,1,1,1)       # meter 2 mm conversion factor, degree conversion factor
+#' rdrs_ncdf_aggregator(ncdir = getwd(),
+#'                      outdir = outdir,
+#' 		     outputfile = outputfile,
+#' 		     shift = shift,
+#' 		     aggregationLength = aggregationLength,
+#'  		     var = var,
+#' 		     var_units = var_units,
+#' 		     var_names = var_names,
+#' 		     fun = fun,
+#' 		     gp_var = gp_var)
+#' @author Rezgar Arabzadeh, University of Waterloo, July 2023
 rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,var,var_units,var_names,fun,gp_var)
 {
   ncfiles<-list.files(ncdir,pattern = "*.nc",full.names = T)
