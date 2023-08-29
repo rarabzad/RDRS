@@ -58,7 +58,7 @@ ifelse("BiocManager"    %in% rownames(installed.packages()),library(BiocManager)
 ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGenerics),BiocManager::install("MatrixGenerics"))
 
 # Weights generation
-grids_weights_generator(ncdir = getwd(),
+grids_weights_generator(ncfile = "2017010112.nc",
                         outdir = outdir,
 			hrufile = "./hru/finalcat_hru_info.shp",
 			HRU_ID = "HRU_ID")
