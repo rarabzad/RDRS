@@ -121,8 +121,8 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
   }
   lat<-ncvar_get(nc,"lat")
   lon<-ncvar_get(nc,"lon")
-  nlon <- dim(lon)[2]
-  nlat <- dim(lat)[1]
+  nlon <- length(nc$dim$rlon$vals)
+  nlat <- length(nc$dim$rlat$vals)
   rlat<-seq(range(lat)[1],range(lat)[2],length.out=nlat)
   rlon<-seq(range(lon)[1],range(lon)[2],length.out=nlon)
   times<-round(seq(aggregationLength*3600/2,
@@ -135,14 +135,14 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
   vars<-vector(mode = "list", length = 5+length(var)+ifelse(gp_var=="",0,1))
   vars[[1]] <- ncvar_def(name = "longitude"   , units = "degree", dim = list(rlon_dim),           missval = NaN,prec="double")
   vars[[2]] <- ncvar_def(name = "latitude"    , units = "degree", dim = list(rlat_dim),           missval = NaN,prec="double")
-  vars[[3]] <- ncvar_def(name = "rotated_lon" , units = "degree", dim = list(rlat_dim,rlon_dim),  missval = NaN,prec="double")
-  vars[[4]] <- ncvar_def(name = "rotated_lat" , units = "degree", dim = list(rlat_dim,rlon_dim),  missval = NaN,prec="double")
+  vars[[3]] <- ncvar_def(name = "rotated_lon" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
+  vars[[4]] <- ncvar_def(name = "rotated_lat" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
   vars[[5]] <- ncvar_def(name = "times"       , units = time_unit,dim = list(time_dim)        ,   missval = NaN,prec="double")
   for(i in 1:length(var))
   {
     vars[[5+i]] <- ncvar_def(name = var_names[i],
                              units = var_units[i] ,
-                             dim = list(rlat_dim,rlon_dim,time_dim),
+                             dim = list(rlon_dim,rlat_dim,time_dim),
                              missval = NaN,
                              prec="double")
   }
@@ -153,7 +153,7 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
     gpe<-geo2ele(gph)
     vars[[6+i]] <- ncvar_def(name = "Geopotential_Elevation",
                              units = "MASL",
-                             dim = list(rlat_dim,rlon_dim),
+                             dim = list(rlon_dim,rlat_dim),
                              missval = NaN,
                              prec="double")
   }
