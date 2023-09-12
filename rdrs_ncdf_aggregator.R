@@ -157,6 +157,7 @@ rdrs_ncdf_aggregator<-function(ncdir,outdir,outputfile,shift,aggregationLength,v
                              missval = NaN,
                              prec="double")
   }
+  if(!dir.exists(outdir)) dir.create(outdir)
   ncnew  <- nc_create( filename = paste0(outdir,outputfile),vars = vars)
   ncvar_put( ncnew, vars[[1]],  rlon,  start=1,      count=length(rlon))
   ncvar_put( ncnew, vars[[2]],  rlat,  start=1,      count=length(rlat))
