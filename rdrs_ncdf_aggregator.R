@@ -135,7 +135,7 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   vars[[2]] <- ncvar_def(name = "latitude"    , units = "degree", dim = list(rlat_dim),           missval = NaN,prec="double")
   vars[[3]] <- ncvar_def(name = "rotated_lon" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
   vars[[4]] <- ncvar_def(name = "rotated_lat" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
-  if(var != "")
+  if(all(var != ""))
   {
     start<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[1])),"0000"))
     end<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[length(ncfiles)])),"0000"))+hours(23)
@@ -242,7 +242,7 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   ncvar_put( ncnew, vars[[2]],  rlat,  start=1,      count=length(rlat))
   ncvar_put( ncnew, vars[[3]],  lon,   start=c(1,1), count=dim(lon))
   ncvar_put( ncnew, vars[[4]],  lat,   start=c(1,1), count=dim(lat))
-  if(var != "")
+  if(all(var != ""))
   {
     ncvar_put( ncnew, vars[[5]],  times, start=1,      count=length(Dates))
     for(i in 1:length(var))
