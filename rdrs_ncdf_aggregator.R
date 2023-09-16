@@ -116,7 +116,6 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
     {
       warning(paste0("one or some of the nc files are corrputed/cannot be opened:\n",
                      paste0(ncfiles[file_open_flag],collapse = "\n"),"\nThe corrupted file(s) are ignored!"))
-      
     }else{
       stop(paste0("one or some of the nc files are corrputed/cannot be opened:\n",
                   paste0(ncfiles[file_open_flag],collapse = "\n")))
@@ -131,12 +130,11 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   rlon<-seq(range(lon)[1],range(lon)[2],length.out=nlon)
   rlon_dim  <- ncdim_def( name = "rlon", units = "degree",vals =rlon)
   rlat_dim  <- ncdim_def( name = "rlat", units = "degree",vals =rlat)
-  vars<-vector(mode = "list", length = 4 + ifelse(var != "",length(var) + 1,0) + ifelse(gp_var != "",1,0))
+  vars<-vector(mode = "list", length = (4 + ifelse(var != "",length(var) + 1,0) + ifelse(gp_var != "",1,0))[1])
   vars[[1]] <- ncvar_def(name = "longitude"   , units = "degree", dim = list(rlon_dim),           missval = NaN,prec="double")
   vars[[2]] <- ncvar_def(name = "latitude"    , units = "degree", dim = list(rlat_dim),           missval = NaN,prec="double")
   vars[[3]] <- ncvar_def(name = "rotated_lon" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
   vars[[4]] <- ncvar_def(name = "rotated_lat" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
-  
   if(var != "")
   {
     start<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[1])),"0000"))
