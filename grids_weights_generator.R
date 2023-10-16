@@ -210,6 +210,7 @@ grids_weights_generator<-function(ncfile,
   if(nrow(id)==1)
   {
     id<-expand.grid(row=(id[1]-1):(id[1]+1),col=(id[2]-1):(id[2]+1))
+    id<-id[id[,1] %in% 1:nrow(mask) & id[,2] %in% 1:ncol(mask),,drop=F]
     flagSquare<-TRUE
   }
   flagColRow<-0
