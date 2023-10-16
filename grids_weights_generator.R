@@ -193,8 +193,8 @@ grids_weights_generator<-function(ncfile,
   if(!(HRU_ID %in% colnames(HRU@data))) stop("The provided 'HRU_ID' doesn't exist in the 'hrufile' attributes!")
   if(!dir.exists(outdir)) dir.create(outdir)
   nc<-nc_open(ncfile)
-  lat<-ncvar_get(nc,"lat")
-  lon<-ncvar_get(nc,"lon")
+  lat<-ncvar_get(nc,"lat",collapse_degen = F)
+  lon<-ncvar_get(nc,"lon",collapse_degen = F)
   cat("creating buffer around the HRU file...\n")
   HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.1))})
   latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
