@@ -35,7 +35,9 @@ rdrs_spatial_aggregator<-function(ncFile,
   if(!is.na(weightsFile))
   {
     weights<-readLines(weightsFile,warn = F)
-    weights<-read.table(text = weights, header = F, skip = 4, nrows = length(weights) - 5)
+    weights<-weights[-grep("^\\s*#", weights)]
+    weights<-weights[-grep("^\\s*:", weights)]
+    weights<-read.table(text = weights, header = F)
     colnames(weights)<-c("spatial_unit","Cell_#","weight")
   }else{
     spatial_unit<-gsub(".nc","",basename(ncFile))
@@ -49,7 +51,7 @@ rdrs_spatial_aggregator<-function(ncFile,
   start_time<-nc$dim$time$units
   match <- regexec(pattern, start_time)
   groups <- regmatches(start_time, match)
-  time_step <- groups[[1]][2]
+  time_step <- ifelse(groups[[1]][2] == "seconds","secs", groups[[1]][2])
   date_time <- groups[[1]][3]
   start_time <- as.POSIXct(date_time, format = "%Y-%m-%d %H:%M:%S")
   sequence_of_times <- start_time + as.difftime(nc$dim$time$vals, units = time_step)
@@ -63,7 +65,9 @@ rdrs_spatial_aggregator<-function(ncFile,
     {
       w<-weights[weights$spatial_unit==spatial_unit[i],"weight"]
       id<-weights[weights$spatial_unit==spatial_unit[i],"Cell_#"]+1
-      W<-var_data[,,1];W[id]<-w
+      W<-var_data[,,1]
+      W[]<-NA
+      W[id]<-w
       W<-array(W, dim = c(dim(W), dim(var_data)[3]))
       mat[,i]<-apply(W*var_data,3,sum,na.rm=T)
     }
