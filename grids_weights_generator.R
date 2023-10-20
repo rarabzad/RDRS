@@ -55,10 +55,10 @@
 #' @author Rezgar Arabzadeh, University of Waterloo, July 2023
 
 grids_weights_generator<-function(ncfile,
-                                  hrufile,
-                                  outdir=outdir,
-                                  HRU_ID="HRU_ID",
-                                  plot=TRUE)
+         hrufile,
+         outdir=outdir,
+         HRU_ID="HRU_ID",
+         plot=TRUE)
 {
   sideRowFiller<-function(latc,lonc,nlat)
   {
@@ -170,11 +170,11 @@ grids_weights_generator<-function(ncfile,
             for(k in 1:nrow(neighbour_cells))
             {
               latc_tmp[k]<-latc[neighbour_cells[k,1],neighbour_cells[k,2]]+
-                            dlatlon[i,j,1]*move[i,j,1]+
-                            dlatlon[i,j,2]*move[i,j,2]
+                dlatlon[i,j,1]*move[i,j,1]+
+                dlatlon[i,j,2]*move[i,j,2]
               lonc_tmp[k]<-lonc[neighbour_cells[k,1],neighbour_cells[k,2]]+
-                            dlatlon[i,j,3]*move[i,j,3]+
-                            dlatlon[i,j,4]*move[i,j,4]
+                dlatlon[i,j,3]*move[i,j,3]+
+                dlatlon[i,j,4]*move[i,j,4]
               a<-a+1
             }
             latc[i,j]<-mean(latc_tmp)
@@ -191,12 +191,14 @@ grids_weights_generator<-function(ncfile,
   if(!file.exists(hrufile)) stop("The provided file path doesn't exist!")
   HRU<-hru<-tryCatch({shapefile(hrufile)}, error = function(e){shapefile(hrufile)})
   if(!(HRU_ID %in% colnames(HRU@data))) stop("The provided 'HRU_ID' doesn't exist in the 'hrufile' attributes!")
+  if(is.na(crs(HRU))) stop("The provided shapefile's CRS is missing!")
+  HRU<-spTransform(x = HRU,CRSobj = crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
   if(!dir.exists(outdir)) dir.create(outdir)
   nc<-nc_open(ncfile)
   lat<-ncvar_get(nc,"lat",collapse_degen = F)
   lon<-ncvar_get(nc,"lon",collapse_degen = F)
   cat("creating buffer around the HRU file...\n")
-  HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),10000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.1))})
+  HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),dist = 5000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.05))})
   latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
                    coords = c("lon", "lat"),
                    crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
@@ -210,72 +212,51 @@ grids_weights_generator<-function(ncfile,
   if(nrow(id)==1)
   {
     id<-expand.grid(row=(id[1]-1):(id[1]+1),col=(id[2]-1):(id[2]+1))
-    id<-id[id[,1] %in% 1:nrow(mask) & id[,2] %in% 1:ncol(mask),,drop=F]
+    id<-as.matrix(id[id[,1] %in% 1:nrow(mask) & id[,2] %in% 1:ncol(mask),,drop=F])
     flagSquare<-TRUE
   }
-  flagColRow<-0
-  colRowCheck<-apply(apply(id,2,duplicated)[-1,,drop=FALSE],2,all)
-  if(any(colRowCheck))
+  if(nrow(id)==1)
   {
-    if(names(which(colRowCheck))=="col")
+    latc<-lonc<-matrix(NA,2,2)
+    lonc[,1]<-lon-0.1/2
+    lonc[,2]<-lon+0.1/2
+    latc[1,]<-lat-0.1/2
+    latc[2,]<-lat+0.1/2
+    latlonc<-matrix(NA,sum((dim(latc)-2)*4)+4+prod(dim(latc)-2)*4,3)
+    latlonc[,1]<-lonc;latlonc[,2]<-latc;latlonc[,3]<-1
+    xmin<-min(c(apply(latlonc[,-3],2,range))[1],c(t(as.matrix(extent(as_Spatial(HRU)))))[1])
+    xmax<-max(c(apply(latlonc[,-3],2,range))[2],c(t(as.matrix(extent(as_Spatial(HRU)))))[2])
+    ymin<-min(c(apply(latlonc[,-3],2,range))[3],c(t(as.matrix(extent(as_Spatial(HRU)))))[3])
+    ymax<-max(c(apply(latlonc[,-3],2,range))[4],c(t(as.matrix(extent(as_Spatial(HRU)))))[4])
+    lonc[,1]<-c(lon) - max(abs(c(lon)-c(xmin,xmax)))
+    lonc[,2]<-c(lon) + max(abs(c(lon)-c(xmin,xmax)))
+    latc[1,]<-c(lat) - max(abs(c(lat)-c(ymin,ymax)))
+    latc[2,]<-c(lat) + max(abs(c(lat)-c(ymin,ymax)))
+    latlonc<-cbind(sort_points(df = data.frame(lon=c(lonc),lat=c(latc)),y = "lat",x = "lon"),1)
+    colnames(latlonc)<-c("lon","lat","group")
+    xyz<-data.frame(x=c(lon),y=c(lat),z=1)
+    xyz<-st_as_sf(xyz,
+                  coords=c("x","y"),
+                  crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    nlat<-nlon <- 1
+  }else{
+    flagColRow<-0
+    colRowCheck<-apply(apply(id,2,duplicated)[-1,,drop=FALSE],2,all)
+    if(any(colRowCheck))
     {
-      col<-(unique(id[,2])-1):(unique(id[,2])+1)
-      colExistance<-col %in% 1:dim(mask)[2]
-      col<-col[colExistance]
-      id<-expand.grid(row=id[,1],col=col)
-      flagColRow<-1
-    }else{
-      row<-(unique(id[,1])-1):(unique(id[,1])+1)
-      rowExistance<-row %in% 1:dim(mask)[1]
-      row<-row[rowExistance]
-      id<-expand.grid(row=row,col=id[,2])
-      flagColRow<-2
-    }
-  }
-  frame<-rbind(apply(id,2,min),apply(id,2,max))
-  frameR<-frame[1,1]:frame[2,1]
-  frameC<-frame[1,2]:frame[2,2]
-  maskRC<-mask[frameR,frameC,drop=FALSE]
-  maskRC<-ifelse(maskRC,1,NA)
-  cat("creating grid lines by moving lat/lon centroids to the corners\n")
-  latRC<-lat[frameR,frameC,drop=F]
-  lonRC<-lon[frameR,frameC,drop=F]
-  if(flagColRow != 0)
-  {
-    if(flagColRow == 1)
-    {
-      if(sum(colExistance)==2)
+      if(names(which(colRowCheck))=="col")
       {
-        latRC<-if(which(!colExistance)==1) cbind(latRC[,1]-abs(apply(latRC,1,diff)),latRC) else cbind(latRC,latRC[,2]+abs(apply(latRC,1,diff)))
-        lonRC<-if(which(!colExistance)==1) cbind(lonRC[,1]-abs(apply(lonRC,1,diff)),lonRC) else cbind(lonRC,lonRC[,2]+abs(apply(lonRC,1,diff)))
-      }
-      if(sum(colExistance)==1)
-      {
-        y<-abs(apply(latRC,2,diff))
-        x<-1:length(y)
-        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
-        latRC<-cbind(latRC-y,latRC,latRC+y)
-        y<-abs(apply(lonRC,2,diff))
-        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
-        lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
-      }
-    }
-    if(flagColRow == 2)
-    {
-      if(sum(rowExistance)==2)
-      {
-        latRC<-if(which(!rowExistance)==1) rbind(latRC[1,]-abs(apply(latRC,2,diff)),latRC) else rbind(latRC,latRC[2,]+abs(apply(latRC,2,diff)))
-        lonRC<-if(which(!rowExistance)==1) rbind(lonRC[1,]-abs(apply(lonRC,2,diff)),lonRC) else rbind(lonRC,lonRC[2,]+abs(apply(lonRC,2,diff)))
-      }
-      if(sum(rowExistance)==1)
-      {
-        y<-abs(apply(latRC,1,diff))
-        x<-1:length(y)
-        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
-        latRC<-rbind(latRC-y,latRC,latRC+y)
-        y<-abs(apply(lonRC,1,diff))
-        y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
-        lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
+        col<-(unique(id[,2])-1):(unique(id[,2])+1)
+        colExistance<-col %in% 1:dim(mask)[2]
+        col<-col[colExistance]
+        id<-expand.grid(row=id[,1],col=col)
+        flagColRow<-1
+      }else{
+        row<-(unique(id[,1])-1):(unique(id[,1])+1)
+        rowExistance<-row %in% 1:dim(mask)[1]
+        row<-row[rowExistance]
+        id<-expand.grid(row=row,col=id[,2])
+        flagColRow<-2
       }
     }
     frame<-rbind(apply(id,2,min),apply(id,2,max))
@@ -283,120 +264,168 @@ grids_weights_generator<-function(ncfile,
     frameC<-frame[1,2]:frame[2,2]
     maskRC<-mask[frameR,frameC,drop=FALSE]
     maskRC<-ifelse(maskRC,1,NA)
-  }
-  nlon <- dim(lonRC)[2]
-  nlat <- dim(latRC)[1]
-  latc <- array(NA, c(nlat+1, nlon+1))
-  lonc <- array(NA, c(nlat+1, nlon+1))
-  dlat <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
-  dlon <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
-  for(ii in 1:max(1,(nlat-1)))
-  {
-    for(jj in 1:max((nlon-1),1))
+    cat("creating grid lines by moving lat/lon centroids to the corners\n")
+    latRC<-lat[frameR,frameC,drop=F]
+    lonRC<-lon[frameR,frameC,drop=F]
+    if(flagColRow != 0)
     {
-      ii_1_id<-ifelse((ii+1)<=nlat,ifelse((ii+1)<1,1,ii+1),nlat)
-      jj_1_id<-ifelse((jj+1)<=nlon,ifelse((jj+1)<1,1,jj+1),nlon)
-      dlat[ii,jj] <- (latRC[ii_1_id,jj_1_id] - latRC[ii,jj])/2
-      dlon[ii,jj] <- (lonRC[ii_1_id,jj_1_id] - lonRC[ii,jj])/2
-    }
-    if(nlon>1) dlat[ii,nlon] <- (latRC[ii_1_id,nlon] - latRC[ii,nlon-1])/2
-    if(nlon>1) dlon[ii,nlon] <- (lonRC[ii_1_id,nlon] - lonRC[ii,nlon-1])/2
-  }
-  frameRC<-expand.grid(row=frameR,col=frameC)
-  z<-(frameRC[,2]-1)*nrow(lat)+frameRC[,1]
-  xyz<-data.frame(x=lon[z],y=lat[z],z=z-1)
-  xyz<-st_as_sf(xyz,
-                coords=c("x","y"),
-                crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
-  dlat<--rbind(dlat[1,],dlat)
-  dlon<--rbind(dlon[1,],dlon)
-  latc[min(2,nlat):nlat, min(2,nlon):nlon] <- latRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
-    dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
-  lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
-    dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
-  if(any(is.na(latc)) | any(is.na(lonc)))
-  {
-    if(nrow(maskRC)>2)
-    {
-      latlonc<-sideRowFiller(latc,lonc,nlat)
-      latc<-latlonc$latc
-      lonc<-latlonc$lonc
-    }else{
-      if(nrow(maskRC)==2)
+      if(flagColRow == 1)
       {
-        latlonc<-squareFiller(latc,lonc,latRC,lonRC)
-        latc<-latlonc$latc
-        lonc<-latlonc$lonc
-      }else{
-        latc[2,min(2,nlon):nlon] <- latc[1,min(2,nlon):nlon] + 
-          dlat[1,min(2,nlon):nlon]
-        lonc[2,min(2,nlon):nlon] <- lonc[1,min(2,nlon):nlon] + 
-          dlon[1,min(2,nlon):nlon]
-        latlonc<-sideColFiller(latc,lonc,nlon)
-        latc<-latlonc$latc
-        lonc<-latlonc$lonc
+        if(sum(colExistance)==2)
+        {
+          latRC<-if(which(!colExistance)==1) cbind(latRC[,1]-abs(apply(latRC,1,diff)),latRC) else cbind(latRC,latRC[,2]+abs(apply(latRC,1,diff)))
+          lonRC<-if(which(!colExistance)==1) cbind(lonRC[,1]-abs(apply(lonRC,1,diff)),lonRC) else cbind(lonRC,lonRC[,2]+abs(apply(lonRC,1,diff)))
+        }
+        if(sum(colExistance)==1)
+        {
+          y<-abs(apply(latRC,2,diff))
+          x<-1:length(y)
+          y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+          latRC<-cbind(latRC-y,latRC,latRC+y)
+          y<-abs(apply(lonRC,2,diff))
+          y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+          lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
+        }
       }
-    }
-  }
-  if(any(is.na(latc)) | any(is.na(lonc)))
-  {
-    if(ncol(maskRC)>2)
-    {
-      latlonc<-sideColFiller(latc,lonc,nlon)
-      latc<-latlonc$latc
-      lonc<-latlonc$lonc
-    }else{
-      if(ncol(maskRC)==2)
+      if(flagColRow == 2)
       {
-        latlonc<-squareFiller(latc,lonc,latRC,lonRC)
-        latc<-latlonc$latc
-        lonc<-latlonc$lonc
-      }else{
-        latc[min(2,nlat):nlat, 2] <- latc[min(2,nlat):nlat, 1] + 
-          dlat[min(2,nlat):nlat, 1]
-        lonc[min(2,nlat):nlat, 2] <- lonc[min(2,nlat):nlat, 1] + 
-          dlon[min(2,nlat):nlat, 1]
+        if(sum(rowExistance)==2)
+        {
+          latRC<-if(which(!rowExistance)==1) rbind(latRC[1,]-abs(apply(latRC,2,diff)),latRC) else rbind(latRC,latRC[2,]+abs(apply(latRC,2,diff)))
+          lonRC<-if(which(!rowExistance)==1) rbind(lonRC[1,]-abs(apply(lonRC,2,diff)),lonRC) else rbind(lonRC,lonRC[2,]+abs(apply(lonRC,2,diff)))
+        }
+        if(sum(rowExistance)==1)
+        {
+          y<-abs(apply(latRC,1,diff))
+          x<-1:length(y)
+          y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+          latRC<-rbind(latRC-y,latRC,latRC+y)
+          y<-abs(apply(lonRC,1,diff))
+          y<-c(y,approxExtrap(x,y,xout = max(x)+1)$y)
+          lonRC<-cbind(lonRC-y,lonRC,lonRC+y)
+        }
+      }
+      frame<-rbind(apply(id,2,min),apply(id,2,max))
+      frameR<-frame[1,1]:frame[2,1]
+      frameC<-frame[1,2]:frame[2,2]
+      maskRC<-mask[frameR,frameC,drop=FALSE]
+      maskRC<-ifelse(maskRC,1,NA)
+    }
+    nlon <- dim(lonRC)[2]
+    nlat <- dim(latRC)[1]
+    latc <- array(NA, c(nlat+1, nlon+1))
+    lonc <- array(NA, c(nlat+1, nlon+1))
+    dlat <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
+    dlon <- matrix(0, nrow=max(nlat-1,1), ncol=nlon)
+    for(ii in 1:max(1,(nlat-1)))
+    {
+      for(jj in 1:max((nlon-1),1))
+      {
+        ii_1_id<-ifelse((ii+1)<=nlat,ifelse((ii+1)<1,1,ii+1),nlat)
+        jj_1_id<-ifelse((jj+1)<=nlon,ifelse((jj+1)<1,1,jj+1),nlon)
+        dlat[ii,jj] <- (latRC[ii_1_id,jj_1_id] - latRC[ii,jj])/2
+        dlon[ii,jj] <- (lonRC[ii_1_id,jj_1_id] - lonRC[ii,jj])/2
+      }
+      if(nlon>1) dlat[ii,nlon] <- (latRC[ii_1_id,nlon] - latRC[ii,nlon-1])/2
+      if(nlon>1) dlon[ii,nlon] <- (lonRC[ii_1_id,nlon] - lonRC[ii,nlon-1])/2
+    }
+    frameRC<-expand.grid(row=frameR,col=frameC)
+    z<-(frameRC[,2]-1)*nrow(lat)+frameRC[,1]
+    xyz<-data.frame(x=lon[z],y=lat[z],z=z-1)
+    xyz<-st_as_sf(xyz,
+                  coords=c("x","y"),
+                  crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    dlat<--rbind(dlat[1,],dlat)
+    dlon<--rbind(dlon[1,],dlon)
+    latc[min(2,nlat):nlat, min(2,nlon):nlon] <- latRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
+      dlat[min(2,nlat):nlat,  min(2,nlon):nlon]
+    lonc[min(2,nlat):nlat, min(2,nlon):nlon] <- lonRC[min(2,nlat):nlat, min(2,nlon):nlon] + 
+      dlon[min(2,nlat):nlat,  min(2,nlon):nlon]
+    if(any(is.na(latc)) | any(is.na(lonc)))
+    {
+      if(nrow(maskRC)>2)
+      {
         latlonc<-sideRowFiller(latc,lonc,nlat)
         latc<-latlonc$latc
         lonc<-latlonc$lonc
+      }else{
+        if(nrow(maskRC)==2)
+        {
+          latlonc<-squareFiller(latc,lonc,latRC,lonRC)
+          latc<-latlonc$latc
+          lonc<-latlonc$lonc
+        }else{
+          latc[2,min(2,nlon):nlon] <- latc[1,min(2,nlon):nlon] + 
+            dlat[1,min(2,nlon):nlon]
+          lonc[2,min(2,nlon):nlon] <- lonc[1,min(2,nlon):nlon] + 
+            dlon[1,min(2,nlon):nlon]
+          latlonc<-sideColFiller(latc,lonc,nlon)
+          latc<-latlonc$latc
+          lonc<-latlonc$lonc
+        }
+      }
+    }
+    if(any(is.na(latc)) | any(is.na(lonc)))
+    {
+      if(ncol(maskRC)>2)
+      {
+        latlonc<-sideColFiller(latc,lonc,nlon)
+        latc<-latlonc$latc
+        lonc<-latlonc$lonc
+      }else{
+        if(ncol(maskRC)==2)
+        {
+          latlonc<-squareFiller(latc,lonc,latRC,lonRC)
+          latc<-latlonc$latc
+          lonc<-latlonc$lonc
+        }else{
+          latc[min(2,nlat):nlat, 2] <- latc[min(2,nlat):nlat, 1] + 
+            dlat[min(2,nlat):nlat, 1]
+          lonc[min(2,nlat):nlat, 2] <- lonc[min(2,nlat):nlat, 1] + 
+            dlon[min(2,nlat):nlat, 1]
+          latlonc<-sideRowFiller(latc,lonc,nlat)
+          latc<-latlonc$latc
+          lonc<-latlonc$lonc
+        }
+      }
+    }
+    if(flagColRow==1)
+    {
+      latc<-latc[,2:3]
+      lonc<-lonc[,2:3]
+      latRC<-latRC[,2,drop=FALSE]
+      lonRC<-lonRC[,2,drop=FALSE]
+      nlon <- dim(lonRC)[2]
+      nlat <- dim(latRC)[1]
+    }
+    if(flagColRow==2)
+    {
+      latc<-latc[2:3,]
+      lonc<-lonc[2:3,]
+      latRC<-latRC[2,,drop=FALSE]
+      lonRC<-lonRC[2,,drop=FALSE]
+      nlon <- dim(lonRC)[2]
+      nlat <- dim(latRC)[1]
+    }
+    if(flagSquare)    {latc<-latc[2:3,2:3];lonc<-lonc[2:3,2:3]}
+    latlonc<-matrix(NA,sum((dim(latc)-2)*4)+4+prod(dim(latc)-2)*4,3)
+    colnames(latlonc)<-c("lon","lat","group")
+    for(ii in 1:nlat)
+    {
+      for(jj in 1:nlon)
+      {
+        lon.tmp<-c(lonc[ii:(ii+1), jj:(jj+1)])
+        lat.tmp<-c(latc[ii:(ii+1), jj:(jj+1)])
+        latlon.tmp<-sort_points(df = data.frame(lon=lon.tmp,lat=lat.tmp),y = "lat",x = "lon")
+        lon.tmp<-latlon.tmp$lon
+        lat.tmp<-latlon.tmp$lat
+        latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),1]<-lon.tmp
+        latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),2]<-lat.tmp
+        latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),3]<-(jj-1)*nlat+ii-1
       }
     }
   }
-  if(flagColRow==1)
-  {
-    latc<-latc[,2:3]
-    lonc<-lonc[,2:3]
-    latRC<-latRC[,2,drop=FALSE]
-    lonRC<-lonRC[,2,drop=FALSE]
-    nlon <- dim(lonRC)[2]
-    nlat <- dim(latRC)[1]
-  }
-  if(flagColRow==2)
-  {
-    latc<-latc[2:3,]
-    lonc<-lonc[2:3,]
-    latRC<-latRC[2,,drop=FALSE]
-    lonRC<-lonRC[2,,drop=FALSE]
-    nlon <- dim(lonRC)[2]
-    nlat <- dim(latRC)[1]
-  }
-  if(flagSquare)    {latc<-latc[2:3,2:3];lonc<-lonc[2:3,2:3]}
-  latlonc<-matrix(NA,sum((dim(latc)-2)*4)+4+prod(dim(latc)-2)*4,3)
-  colnames(latlonc)<-c("lon","lat","group")
-  for(ii in 1:nlat)
-  {
-    for(jj in 1:nlon)
-    {
-      lon.tmp<-c(lonc[ii:(ii+1), jj:(jj+1)])
-      lat.tmp<-c(latc[ii:(ii+1), jj:(jj+1)])
-      latlon.tmp<-sort_points(df = data.frame(lon=lon.tmp,lat=lat.tmp),y = "lat",x = "lon")
-      lon.tmp<-latlon.tmp$lon
-      lat.tmp<-latlon.tmp$lat
-      latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),1]<-lon.tmp
-      latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),2]<-lat.tmp
-      latlonc[((jj-1)*4+nlon*4*(ii-1)+1):((4*jj)+nlon*4*(ii-1)),3]<-(jj-1)*nlat+ii-1
-    }
-  }
+  
   cat("creating grid lines\n")
   latlonc<-as.data.frame(latlonc)
   spdf <- SpatialPointsDataFrame(latlonc, latlonc[,3,drop=F], proj4string=CRS("+proj=longlat"))
