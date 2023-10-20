@@ -34,7 +34,7 @@ rdrs_spatial_mask<-function(ncFile,
 {
   if(!file.exists(ncFile))   stop("provided netcdf file doesn't exist!")
   if(!file.exists(maskFile)) stop("provided mask file doesn't exist!")
-  if(sub(".*\\.", "", basename(ncFileOut)) != "nc") stop ("wrong 'ncFileOut' extension specified. only '*.nc' file are accepted!")
+  if(!is.na(ncFileOut)) if(sub(".*\\.", "", basename(ncFileOut)) != "nc") stop ("wrong 'ncFileOut' extension specified. only '*.nc' file are accepted!")
   boundary<-shapefile(maskFile)
   if(is.na(crs(boundary))) stop("provided mask file has no projection system!")
   nc<-nc_open(ncFile)
@@ -92,13 +92,13 @@ rdrs_spatial_mask<-function(ncFile,
   {
     rlon<-seq(range(lonRC)[1],range(lonRC)[2],length.out=nlon)
   }else{
-    rlon<-c(lonRC)
+    rlon<-mean(lonRC)
   }
   if(nlat>1)
   {
     rlat<-seq(range(latRC)[1],range(latRC)[2],length.out=nlat)
   }else{
-    rlat<-c(latRC)
+    rlat<-mean(latRC)
   }
   times<-nc$dim$time$vals
   time_unit<-nc$dim$time$units
