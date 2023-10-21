@@ -55,6 +55,7 @@ ifelse("rgdal"          %in% rownames(installed.packages()),library(rgdal),     
 ifelse("raster"         %in% rownames(installed.packages()),library(raster),        install.packages("raster"))
 ifelse("Rcpp"           %in% rownames(installed.packages()),library(Rcpp),          install.packages("Rcpp"))
 ifelse("terra"          %in% rownames(installed.packages()),library(terra),         install.packages("terra"))
+ifelse("Hmisc"          %in% rownames(installed.packages()),library(Hmisc),         install.packages("Hmisc"))
 ifelse("BiocManager"    %in% rownames(installed.packages()),library(BiocManager),   install.packages("BiocManager"))
 ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGenerics),BiocManager::install("MatrixGenerics"))
 
