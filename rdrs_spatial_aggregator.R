@@ -60,7 +60,8 @@ rdrs_spatial_aggregator<-function(ncFile,
   {
     cat(paste0("(",j,"/",length(vars),")", " #### Aggregating: ",vars[j]," ####\n"))
     mat<-matrix(NA,length(sequence_of_times),length(spatial_unit))
-    var_data<-ncvar_get(nc,vars[j],collapse_degen = F)
+    var_data<-ncvar_get(nc,vars[j], collapse_degen = F)
+    
     for(i in 1:length(spatial_unit))
     {
       w<-weights[weights$spatial_unit==spatial_unit[i],"weight"]
