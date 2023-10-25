@@ -80,5 +80,6 @@ rdrs_spatial_aggregator<-function(ncFile,
   aggregated_data<-do.call(cbind, aggregated_data)
   colnames(aggregated_data)<-apply(as.matrix(expand.grid(sprintf("(%s)",spatial_unit),vars)),1,paste, collapse = " ")
   write.csv(aggregated_data,OutFile)
+  nc_close(nc)
   cat(paste("output file is saved at:",OutFile,"\n"))
 }
