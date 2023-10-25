@@ -66,10 +66,16 @@ rdrs_spatial_aggregator<-function(ncFile,
     {
       w<-weights[weights$spatial_unit==spatial_unit[i],"weight"]
       id<-weights[weights$spatial_unit==spatial_unit[i],"Cell_#"]+1
-      W<-var_data[,,1,drop=FALSE]
-      W[]<-NA
-      W[id]<-w
-      W<-array(W, dim = c(dim(W), dim(var_data)[3]))
+      if (length(w)>1)
+      {
+        W<-var_data[,,1]
+        W[]<-NA
+        W[id]<-w
+        W<-array(W, dim = c(dim(W), dim(var_data)[3]))       
+      }else{
+        W<-matrix(w,1,1)
+        W<-array(W, dim = c(dim(W), dim(var_data)[3]))
+      }
       mat[,i]<-apply(W*var_data,3,sum,na.rm=T)
     }
     mat<-as.data.frame(mat)
