@@ -14,10 +14,12 @@
 #' By definition, the grid domain has to completely cover the HRU domain such that the sum of
 #' wt[k][g] for any k, over all g, is 1.0.
 #' 
-#' @param hrufile polygon shapefile (file path) of HRUs with data column containing HRU IDs (*.shp extension expected)
 #' @param ncfile NetCDF file (file path) of grid cells (*.nc extension expected)
-#' @param HRU_ID the name of the hrufile polygon which contains the HRU IDs (default is "HRU_ID")
+#' @param hrufile polygon shapefile (file path) of HRUs with data column containing HRU IDs (*.shp extension expected)
 #' @param out output directory where the generated files will be stored
+#' @param HRU_ID the name of the hrufile polygon which contains the HRU IDs (default is "HRU_ID")
+#' @param use_master_grids logical, whether to use a pre-calculated product or not
+#' @param plot logical whether to plot the grid product or not
 #' @return \item{weights.txt}{a txt file in the Raven readable format with the number of HRUs, number of grid cells, and gridweights data frame.}
 #' @return \item{grids_polygons.shp}{shapefile of calculated grid cells}
 #' @return \item{grids_centroids.shp}{shapefile of calculated grid cells centroids}
@@ -47,19 +49,20 @@
 #' ncfile<-list.files(getwd(),pattern="*.nc",full.name=TRUE)[1]  # location of the netcdf file
 #' HRU_ID<-"HRU_ID"                       # the name of attribute table column of the HRUs
 #' grids_weights_generator(ncfile = ncfile,
+#' 			hrufile = hrufile,
 #'                         outdir = outdir,
-#' 			                   hrufile = hrufile,
-#' 			                   HRU_ID = HRU_ID,
+#' 			HRU_ID = HRU_ID,
+#'                         use_master_grids=FALSE,
 #'                         plot=TRUE)
 
 #' @author Rezgar Arabzadeh, University of Waterloo, July 2023
 
 grids_weights_generator<-function(ncfile,
-         hrufile,
-         outdir=outdir,
-         HRU_ID="HRU_ID",
-         use_master_grids=T,
-         plot=TRUE)
+                                  hrufile,
+                                  outdir=outdir,
+                                  HRU_ID="HRU_ID",
+                                  use_master_grids=FALSE,
+                                  plot=TRUE)
 {
   sideRowFiller<-function(latc,lonc,nlat)
   {
@@ -214,6 +217,8 @@ grids_weights_generator<-function(ncfile,
     centroids_grids_overlap<-which(st_intersects(st_as_sf(grids),xyz,sparse = F),arr.ind = T)
     grids@data$Cell_ID[centroids_grids_overlap[,1]]<-xyz$z[centroids_grids_overlap[,2]]
     grids<-grids[centroids_grids_overlap[,1],]
+    unlink("master_grids",recursive = T)
+    file.remove("master_grids.zip")
   }else{
     HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),dist = 5000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.05))})
     latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
