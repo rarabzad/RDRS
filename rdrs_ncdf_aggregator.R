@@ -155,8 +155,8 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
                               layer=rep(1:24,length(ncfiles)))
     Dates<-unique(files_indices$group_name)
     val<-array(NA,c(dim(ncvar_get(nc,var[1]))[1:2],length(Dates),length(var)))
-    times<-round(seq(aggregationLength*3600/2,
-                     aggregationLength*3600*(length(Dates)-1)+aggregationLength*3600/2,
+    times<-round(seq(aggregationLength*3600,
+                     aggregationLength*3600*length(Dates),
                      by=aggregationLength*3600))
     time_unit<-paste("seconds since",ymd_hms(paste(as.Date(files_indices$dates_after_shift[1]),"00:00:00"))+aggregationLength*3600/2)
     time_dim  <- ncdim_def( name = "time", units = time_unit , vals =times)
