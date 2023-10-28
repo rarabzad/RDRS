@@ -54,6 +54,7 @@ rdrs_spatial_aggregator<-function(ncFile,
   time_step <- ifelse(groups[[1]][2] == "seconds","secs", groups[[1]][2])
   date_time <- groups[[1]][3]
   start_time <- as.POSIXct(date_time, format = "%Y-%m-%d %H:%M:%S")
+  if(time_step=="seconds") time_step<-"secs"
   sequence_of_times <- start_time + as.difftime(nc$dim$time$vals, units = time_step)
   aggregated_data<-list()
   for(j in 1:length(vars))
