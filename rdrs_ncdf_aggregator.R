@@ -24,19 +24,11 @@
 #' # download data
 #' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
 #' unzip("data.zip")
-#' ncdir<-getwd()                         # directory where NetCDFs are stored
-#' outdir<-paste0(getwd(),"/output/")     # output directory
-#' dir.create(outdir)
-#' outputfile<- "RavenInput.nc"           # output *.nc file name
-#' var<-c("RDRS_v2.1_A_PR0_SFC",
+#' var<-c("RDRS_v2.1_A_PR0_SFC",          # variables to aggregate
 #'        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
 #'        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
 #'        "RDRS_v2.1_P_TT_1.5m")          # variables to aggregate
 #' gp_var<-"RDRS_v2.1_P_GZ_SFC"           # geo-potential variables name, set as gp_var<-"" if not applicable
-#' var_names<-c("precipitation",
-#'              "mean_temperature",
-#'              "min_temperature",
-#'              "max_temperature")        # variables names to be written in the nc file
 #' var_units<-c("mm",
 #'              "degC",
 #'              "degC",
@@ -48,44 +40,65 @@
 #' shift<-8                               # Hours
 #' aggregationLength<-24                  # Hours
 #' aggregationFactor<-c(1000,1,1,1)       # meter 2 mm conversion factor, degree conversion factor
-#' rdrs_ncdf_aggregator(ncdir = getwd(),
-#'                      outdir = outdir,
-#' 		     outputfile = outputfile,
-#' 		     shift = shift,
-#' 		     aggregationLength = aggregationLength,
-#'  		     var = var,
-#' 		     var_units = var_units,
-#' 		     var_names = var_names,
-#' 		     fun = fun,
-#' 		     gp_var = gp_var)
-#' @author Rezgar Arabzadeh, University of Waterloo, July 2023
+#' rdrs_ncdf_aggregator(shift = shift,
+#'              		    aggregationLength = aggregationLength,
+#'                      periodStartTime=0,
+#'  		                var = var,
+#' 		                  var_units = var_units,
+#' 		                  fun = fun,
+#'                      aggregationFactor=aggregationFactor,
+#' 		                  gp_var = gp_var)
+#' @author Rezgar Arabzadeh, University of Waterloo, Nov 2023
 rdrs_ncdf_aggregator<-function(ncdir=getwd(),
                                outdir=paste0(ncdir,"/output"),
                                outputfile="RavenInput.nc",
-                               shift=4,
+                               shift=7,
                                aggregationLength=24,
+                               periodStartTime=0,
                                var=c("RDRS_v2.1_A_PR0_SFC",
                                      "RDRS_v2.1_P_TT_1.5m",
                                      "RDRS_v2.1_P_TT_1.5m",
                                      "RDRS_v2.1_P_TT_1.5m"),
-                               gp_var="RDRS_v2.1_P_GZ_SFC",
                                var_units=c("mm",
                                            "degC",
                                            "degC",
                                            "degC"),
-                               var_names=c("precipitation",
-                                           "mean_temperature",
-                                           "min_temperature",
-                                           "max_temperature"),
                                fun=c("sum",
                                      "mean",
                                      "min",
-                                     "max"))
+                                     "max"),
+                               aggregationFactor=c(1000,1,1,1),
+                               gp_var="RDRS_v2.1_P_GZ_SFC")
 {
-  if(!dir.exists(ncdir)) stop("NetCDFs input directory doesn't exist!")
   if(!dir.exists(outdir)) dir.create(outdir)
-  ncfiles<-list.files(ncdir,pattern = "*.nc",full.names = T)
+  ncfiles<-list.files(ncdir,pattern = "\\d{8}12\\.nc$",full.names = T)
   if(length(ncfiles)==0) stop("No NetCDF files found in the 'ncdir'")
+  timestamps<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles)),"0000"),tz = "UTC")
+  start_date <- min(timestamps)
+  end_date <- max(timestamps)
+  full_sequence <- seq(from = start_date, to = end_date, by = "day")
+  missing_id<-is.na(match(full_sequence,timestamps))
+  var_names<-var
+  if(any(!seq_len(length(var)) %in% grep(pattern = "RDRS",var)))
+  {
+    warning(paste("the following non-RDRS variables are omitted!\n",
+                  paste(var[!seq_len(length(var)) %in% grep(pattern = "RDRS",var)],collapse = "\n")))
+  }
+  if(length(var)<1) stop("No valid variable(s) provided to be aggregated!")
+  if(all(is.na(var_units)))
+  {
+    var_units<-rep(NA,length(var))
+    for(i in 1:length(var_units)) var_units[i]<-nc$var[[var[i]]]$units
+    if(!all(aggregationFactor==1))
+    {
+      df_output <- capture.output(print(data.frame(var,var_units,aggregationFactor)))
+      warning("The units of raw RDRS variables might be inaccurate if the 'aggregationFactor' is not set to 1. It is advisable to reassess the variable units after applying the 'aggregationFactor':\n", paste(df_output, collapse = "\n"))
+    }
+  }else{
+    if(length(var_units)!=length(var)) stop("The lengths of the 'var_units' and 'var' variables are inconsistent!")
+  }
+  longnames<-rep(NA,length(var))
+  for(i in 1:length(var)) longnames[i]<-paste0("[",aggregationLength," hours ",fun[i],"] ",nc$var[[var[i]]]$longname)
   all_vars<-c(var,gp_var)
   all_vars<-all_vars[nchar(all_vars)>0]
   file_open_flag<-variable_exist_flag<-rep(F,length(ncfiles))
@@ -93,6 +106,10 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   cat("#######################################\n")
   cat("######## checking input files #########\n")
   cat("#######################################\n")
+  if(any(missing_id))
+  {
+    stop(cat(paste0("the following files are missing:\n",paste0(basename(ncfiles)[missing_id],collapse = "\n")))) 
+  }
   for(i in 1:length(ncfiles))
   {
     pb$tick()
@@ -112,7 +129,7 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   }
   if(any(file_open_flag))
   {
-    if(all_vars==gp_var)
+    if(all(all_vars==gp_var))
     {
       warning(paste0("one or some of the nc files are corrputed/cannot be opened:\n",
                      paste0(ncfiles[file_open_flag],collapse = "\n"),"\nThe corrupted file(s) are ignored!"))
@@ -130,37 +147,44 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   rlon<-seq(range(lon)[1],range(lon)[2],length.out=nlon)
   rlon_dim  <- ncdim_def( name = "rlon", units = "degree",vals =rlon)
   rlat_dim  <- ncdim_def( name = "rlat", units = "degree",vals =rlat)
-  vars<-vector(mode = "list", length = (4 + ifelse(var != "",length(var) + 1,0) + ifelse(gp_var != "",1,0))[1])
-  vars[[1]] <- ncvar_def(name = "longitude"   , units = "degree", dim = list(rlon_dim),           missval = NaN,prec="double")
-  vars[[2]] <- ncvar_def(name = "latitude"    , units = "degree", dim = list(rlat_dim),           missval = NaN,prec="double")
-  vars[[3]] <- ncvar_def(name = "rotated_lon" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
-  vars[[4]] <- ncvar_def(name = "rotated_lat" , units = "degree", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double")
+  vars<-vector(mode = "list", length = (2 + length(var) + ifelse(gp_var != "",1,0)))
+  vars[[1]] <- ncvar_def(name = "lon" , units = "degrees_east",  dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double",longname = "longitude")
+  vars[[2]] <- ncvar_def(name = "lat" , units = "degrees_north", dim = list(rlon_dim,rlat_dim),  missval = NaN,prec="double",longname = "latitude")
   if(all(var != ""))
   {
-    start<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[1])),"0000"))
-    end<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles[length(ncfiles)])),"0000"))+hours(23)
-    dates<-seq(start,end,"hour")
-    dates_after_shift<-dates-hours(shift)
-    step_size <- 3600 * aggregationLength # in seconds
-    aggregation_hourly_dates <- seq(from = range(dates_after_shift)[1], to = range(dates_after_shift)[2], by = step_size)
-    nearest_aggregation_hourly_dates <- floor_date(dates_after_shift, sprintf("%s hour",aggregationLength))
-    grouped_hourly_dates <- split(dates_after_shift, nearest_aggregation_hourly_dates)
-    group_index<-rep(1:length(grouped_hourly_dates),unlist(lapply(grouped_hourly_dates,length)))
-    group_name <-rep(names(grouped_hourly_dates),unlist(lapply(grouped_hourly_dates,length)))
+    start<-start_date
+    end<-end_date+hours(23)
+    time_step<-"hours"
+    time_steps<-as.difftime(seq_along(seq(start,end,time_step))-1, units = time_step)
+    dates_after_shift<-start-hours(shift)
+    dates_after_shift_start_period<-start-hours(shift)-hours(periodStartTime)
+    dates_after_shift<-dates_after_shift+time_steps
+    dates_after_shift_start_period<-dates_after_shift_start_period+time_steps
+    dates<-start+time_steps
+    id_first<-which(hour(dates_after_shift[1:24])-hour(hours(periodStartTime))==0)
+    break_id<-c(1,seq(id_first,length(dates_after_shift),aggregationLength))
+    break_groups<-c()
+    for(i in 1:length(break_id))  break_groups<-c(break_groups,rep(i,ifelse(length(break_id)==i,length(dates_after_shift)-break_id[i]+1,break_id[i+1]-break_id[i])))
+    grouped_hourly_dates<-split(dates_after_shift,break_groups)
+    names(grouped_hourly_dates)<-dates_after_shift[break_id]
+    group_index<-break_groups
+    group_name<-rep(names(grouped_hourly_dates),unlist(lapply(grouped_hourly_dates,length)))
+    NCFILES<-rep(ncfiles,each=24)
+    LAYER<-rep(1:24,length(ncfiles))
     files_indices<-data.frame(dates=dates,
                               dates_after_shift=dates_after_shift,
                               group_index=group_index,
                               group_name=group_name,
-                              ncfiles=rep(ncfiles,each=24),
-                              layer=rep(1:24,length(ncfiles)))
+                              ncfiles= NCFILES,
+                              layer=LAYER)
+    write.csv(x = files_indices,file = file.path(outdir,"aggregation_procedure.csv"))
     Dates<-unique(files_indices$group_name)
     val<-array(NA,c(dim(ncvar_get(nc,var[1]))[1:2],length(Dates),length(var)))
-    times<-round(seq(aggregationLength*3600,
-                     aggregationLength*3600*length(Dates),
-                     by=aggregationLength*3600))
-    time_unit<-paste("seconds since",ymd_hms(paste(as.Date(files_indices$dates_after_shift[1]),"00:00:00"))+aggregationLength*3600)
+    times<-round(seq(aggregationLength,
+                     aggregationLength*length(Dates),
+                     by=aggregationLength))
+    time_unit<-paste("hours since",ymd_hms(Dates[2])-hours(aggregationLength),ifelse(aggregationLength==24,sprintf("%02d:00:00", periodStartTime),""))
     time_dim  <- ncdim_def( name = "time", units = time_unit , vals =times)
-    vars[[5]] <- ncvar_def(name = "times"       , units = time_unit,dim = list(time_dim)        ,   missval = NaN,prec="double")
     for(k in 1:length(unique(var)))
     {
       cat("#######################################\n")
@@ -175,17 +199,21 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
         id<-which(!is.na(match(files_indices$group_name,currentDate)))
         currentFiles<-files_indices$ncfiles[id]
         currentLayers<-files_indices$layer[id]
-        val.tmp<-array(NA,c(dim(ncvar_get(nc,currentVar))[1:2],length(currentVarId),length(unique(currentFiles))))
+        val.tmp<-array(NA,c(dim(ncvar_get(nc,currentVar))[1:2],
+                            length(currentVarId),
+                            length(unique(currentFiles))))
         for(j in 1:length(unique(currentFiles)))
         {
-          nc_j<-nc_open(unique(currentFiles)[j])
-          currentVal<-ncvar_get(nc_j,currentVar)
+          nc_j<-nc_open(filename = unique(currentFiles)[j])
+          currentVal<-ncvar_get(nc_j,currentVar,
+                                start=c(1,1,min(currentLayers)),
+                                count=c(length(nc$dim$rlon$vals),length(nc$dim$rlat$vals),length(currentLayers)),collapse_degen = F)
           for(l in 1:length(currentVarId))
           {
-            if(fun[currentVarId[l]]=="sum")  val.tmp[,,l,j]<-rowSums (currentVal[,,currentLayers[which(!is.na(match(currentFiles,unique(currentFiles)[j])))],drop=F], dims=2)
-            if(fun[currentVarId[l]]=="mean") val.tmp[,,l,j]<-rowMeans(currentVal[,,currentLayers[which(!is.na(match(currentFiles,unique(currentFiles)[j])))],drop=F], dims=2)
-            if(fun[currentVarId[l]]=="min")  val.tmp[,,l,j]<-apply   (currentVal[,,currentLayers[which(!is.na(match(currentFiles,unique(currentFiles)[j])))],drop=F], c(1, 2), min)
-            if(fun[currentVarId[l]]=="max")  val.tmp[,,l,j]<-apply   (currentVal[,,currentLayers[which(!is.na(match(currentFiles,unique(currentFiles)[j])))],drop=F], c(1, 2), max)
+            if(fun[currentVarId[l]]=="sum")  val.tmp[,,l,j]<-rowSums (currentVal[,,,drop=F], dims=2)
+            if(fun[currentVarId[l]]=="mean") val.tmp[,,l,j]<-rowMeans(currentVal[,,,drop=F], dims=2)
+            if(fun[currentVarId[l]]=="min")  val.tmp[,,l,j]<-apply   (currentVal[,,,drop=F], c(1, 2), min)
+            if(fun[currentVarId[l]]=="max")  val.tmp[,,l,j]<-apply   (currentVal[,,,drop=F], c(1, 2), max)
           }
           nc_close(nc_j)
         }
@@ -199,10 +227,12 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
         pb$tick()
       }
     }
+    
     for(i in 1:length(var))
     {
-      vars[[5+i]] <- ncvar_def(name = var_names[i],
-                               units = var_units[i] ,
+      vars[[2+i]] <- ncvar_def(name = var_names[i],
+                               units = var_units[i],
+                               longname = longnames[i],
                                dim = list(rlon_dim,rlat_dim,time_dim),
                                missval = NaN,
                                prec="double")
@@ -231,23 +261,21 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
     geo2ele<-function(gph)  (gph*10*9.81)*6371000/(9.81*6371000-gph*10*9.81)
     gpe<-geo2ele(gph)
     vars[[length(vars)]] <- ncvar_def(name = "Geopotential_Elevation",
-                             units = "MASL",
-                             dim = list(rlon_dim,rlat_dim),
-                             missval = NaN,
-                             prec="double")
+                                      units = "m",
+                                      longname = "[entire period mean] Geopotential Elevation Above the Sea Levels",
+                                      dim = list(rlon_dim,rlat_dim),
+                                      missval = NaN,
+                                      prec="double")
   }
   if(!dir.exists(outdir)) dir.create(outdir)
-  ncnew  <- nc_create( filename = paste0(outdir,outputfile),vars = vars)
-  ncvar_put( ncnew, vars[[1]],  rlon,  start=1,      count=length(rlon))
-  ncvar_put( ncnew, vars[[2]],  rlat,  start=1,      count=length(rlat))
-  ncvar_put( ncnew, vars[[3]],  lon,   start=c(1,1), count=dim(lon))
-  ncvar_put( ncnew, vars[[4]],  lat,   start=c(1,1), count=dim(lat))
+  ncnew  <- nc_create( filename = file.path(outdir,outputfile),vars = vars)
+  ncvar_put( ncnew, vars[[1]],  lon,   start=c(1,1), count=dim(lon))
+  ncvar_put( ncnew, vars[[2]],  lat,   start=c(1,1), count=dim(lat))
   if(all(var != ""))
   {
-    ncvar_put( ncnew, vars[[5]],  times, start=1,      count=length(Dates))
     for(i in 1:length(var))
     {
-      ncvar_put( ncnew, vars[[i+5]], val[,,,i], start=c(1,1,1), count=dim(val[,,,i]))
+      ncvar_put( ncnew, vars[[i+2]], val[,,,i], start=c(1,1,1), count=dim(val[,,,i]))
     }
   }
   if(gp_var != "")
@@ -255,4 +283,5 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
     ncvar_put( ncnew, vars[[length(vars)]], gpe, start=c(1,1), count=dim(gpe))
   }
   nc_close(ncnew)
+  cat(paste("DONE: all output files are stored at:\n",outdir))
 }
