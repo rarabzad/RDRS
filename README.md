@@ -26,10 +26,6 @@ var<-c("RDRS_v2.1_A_PR0_SFC",
        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
        "RDRS_v2.1_P_TT_1.5m")          # variables to aggregate
 gp_var<-"RDRS_v2.1_P_GZ_SFC"           # geo-potential variables name, set as gp_var<-"" if not applicable
-var_names<-c("precipitation",
-             "mean_temperature",
-             "min_temperature",
-             "max_temperature")        # variables names to be written in the nc file
 var_units<-c("mm",
              "degC",
              "degC",
@@ -41,7 +37,7 @@ fun<-c("sum",
 shift<-8                               # Hours
 aggregationLength<-24                  # Hours
 aggregationFactor<-c(1000,1,1,1)       # meter 2 mm conversion factor, degree conversion factor
-
+periodStartTime<-0
 # Loading required packages
 ifelse("ncdf4"          %in% rownames(installed.packages()),library(ncdf4),         install.packages("ncdf4"))
 ifelse("rgeos"          %in% rownames(installed.packages()),library(rgeos),         install.packages("rgeos"))
@@ -73,8 +69,9 @@ rdrs_ncdf_aggregator(ncdir = getwd(),
 		     aggregationLength = aggregationLength,
  		     var = var,
 		     var_units = var_units,
-		     var_names = var_names,
 		     fun = fun,
-		     gp_var = gp_var)
+		     gp_var = gp_var,
+                     periodStartTime=periodStartTime,
+                     aggregationFactor=aggregationFactor)
 
 ```
