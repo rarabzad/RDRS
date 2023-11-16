@@ -52,7 +52,7 @@
 rdrs_ncdf_aggregator<-function(ncdir=getwd(),
                                outdir=paste0(ncdir,"/output"),
                                outputfile="RavenInput.nc",
-                               shift=7,
+                               shift=5,
                                aggregationLength=24,
                                periodStartTime=0,
                                var=c("RDRS_v2.1_A_PR0_SFC",
