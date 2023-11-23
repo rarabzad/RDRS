@@ -5,6 +5,23 @@ In this section, two R functions will be called to generate the HRUs/RDRS grids 
 
 ``` r
 # loading main functions
+# Loading required packages
+ifelse("ncdf4"          %in% rownames(installed.packages()),library(ncdf4),         install.packages("ncdf4"))
+ifelse("rgeos"          %in% rownames(installed.packages()),library(rgeos),         install.packages("rgeos"))
+ifelse("sp"             %in% rownames(installed.packages()),library(sp),            install.packages("sp"))
+ifelse("sf"             %in% rownames(installed.packages()),library(sf),            install.packages("sf"))
+ifelse("devtools"       %in% rownames(installed.packages()),library(devtools),      install.packages("devtools"))
+ifelse("gissr"          %in% rownames(installed.packages()),library(gissr),         install_github  ("skgrange/gissr"))
+ifelse("lubridate"      %in% rownames(installed.packages()),library(lubridate),     install.packages("lubridate"))
+ifelse("progress"       %in% rownames(installed.packages()),library(progress),      install.packages("progress"))
+ifelse("rgdal"          %in% rownames(installed.packages()),library(rgdal),         install.packages("rgdal"))
+ifelse("raster"         %in% rownames(installed.packages()),library(raster),        install.packages("raster"))
+ifelse("Rcpp"           %in% rownames(installed.packages()),library(Rcpp),          install.packages("Rcpp"))
+ifelse("terra"          %in% rownames(installed.packages()),library(terra),         install.packages("terra"))
+ifelse("Hmisc"          %in% rownames(installed.packages()),library(Hmisc),         install.packages("Hmisc"))
+ifelse("BiocManager"    %in% rownames(installed.packages()),library(BiocManager),   install.packages("BiocManager"))
+ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGenerics),BiocManager::install("MatrixGenerics"))
+
 dir.create("c:/rdrs")
 setwd("c:/rdrs")
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
@@ -38,22 +55,6 @@ shift<-8                               # Hours
 aggregationLength<-24                  # Hours
 aggregationFactor<-c(1000,1,1,1)       # meter 2 mm conversion factor, degree conversion factor
 periodStartTime<-0
-# Loading required packages
-ifelse("ncdf4"          %in% rownames(installed.packages()),library(ncdf4),         install.packages("ncdf4"))
-ifelse("rgeos"          %in% rownames(installed.packages()),library(rgeos),         install.packages("rgeos"))
-ifelse("sp"             %in% rownames(installed.packages()),library(sp),            install.packages("sp"))
-ifelse("sf"             %in% rownames(installed.packages()),library(sf),            install.packages("sf"))
-ifelse("devtools"       %in% rownames(installed.packages()),library(devtools),      install.packages("devtools"))
-ifelse("gissr"          %in% rownames(installed.packages()),library(gissr),         install_github  ("skgrange/gissr"))
-ifelse("lubridate"      %in% rownames(installed.packages()),library(lubridate),     install.packages("lubridate"))
-ifelse("progress"       %in% rownames(installed.packages()),library(progress),      install.packages("progress"))
-ifelse("rgdal"          %in% rownames(installed.packages()),library(rgdal),         install.packages("rgdal"))
-ifelse("raster"         %in% rownames(installed.packages()),library(raster),        install.packages("raster"))
-ifelse("Rcpp"           %in% rownames(installed.packages()),library(Rcpp),          install.packages("Rcpp"))
-ifelse("terra"          %in% rownames(installed.packages()),library(terra),         install.packages("terra"))
-ifelse("Hmisc"          %in% rownames(installed.packages()),library(Hmisc),         install.packages("Hmisc"))
-ifelse("BiocManager"    %in% rownames(installed.packages()),library(BiocManager),   install.packages("BiocManager"))
-ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGenerics),BiocManager::install("MatrixGenerics"))
 
 # Weights generation
 grids_weights_generator(ncfile = "2017010112.nc",
@@ -73,5 +74,23 @@ rdrs_ncdf_aggregator(ncdir = getwd(),
 		     gp_var = gp_var,
                      periodStartTime=periodStartTime,
                      aggregationFactor=aggregationFactor)
+
+# spatial aggregation
+rdrs_spatial_aggregator(ncFile = "output/RavenInput.nc",
+                        weightsFile = "output/weights.txt",
+                        OutFile = "output/spatial_aggregated.csv")
+
+# spatial masking
+hru<-shapefile(hrufile)
+plot(hru)
+hru<-hru[hru$SubId == 11004375,] # a subset of the basin
+lines(hru,col="red",lwd=2)
+writeOGR(obj = hru,dsn = "output/",
+         layer = "hru",
+         driver = "ESRI Shapefile",
+         overwrite_layer = T)
+rdrs_spatial_mask(ncFile = "output/RavenInput.nc",
+                  maskFile ="output/hru.shp" ,
+                  ncFileOut = "output/RavenInput_masked.nc")
 
 ```
