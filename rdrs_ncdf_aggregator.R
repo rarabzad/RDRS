@@ -79,6 +79,10 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   full_sequence <- seq(from = start_date, to = end_date, by = "day")
   missing_id<-is.na(match(full_sequence,timestamps))
   var_names<-var
+  if(any(duplicated(var_names)))
+  {
+    var_names<-paste0(fun,"_",var_names)
+  }
   if(any(!seq_len(length(var)) %in% grep(pattern = "RDRS",var)))
   {
     warning(paste("the following non-RDRS variables are omitted!\n",
@@ -97,6 +101,7 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   }else{
     if(length(var_units)!=length(var)) stop("The lengths of the 'var_units' and 'var' variables are inconsistent!")
   }
+  nc<-nc_open(ncfiles[1])
   longnames<-rep(NA,length(var))
   for(i in 1:length(var)) longnames[i]<-paste0("[",aggregationLength," hours ",fun[i],"] ",nc$var[[var[i]]]$longname)
   all_vars<-c(var,gp_var)
