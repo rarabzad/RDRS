@@ -24,7 +24,7 @@ ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGeneri
 
 dir.create("c:/rdrs")
 setwd("c:/rdrs")
-# loading the functions
+# loading RDRS function sets
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_aggregator.R")
