@@ -288,8 +288,8 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   {
     ncvar_put( ncnew, vars[[length(vars)]], gpe, start=c(1,1), count=dim(gpe))
   }
-  nc_close(ncnew)
   writeLines(text = capture.output(ncnew),
              con = file.path(file.path(outdir), paste0(gsub(".nc","",outputfile),"_content.txt")))
+  nc_close(ncnew)
   cat(paste("DONE: all output files are stored at:\n",outdir))
 }
