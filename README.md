@@ -24,8 +24,11 @@ ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGeneri
 
 dir.create("c:/rdrs")
 setwd("c:/rdrs")
+# loading the functions
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
 source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_mask.R")
 
 # download data
 download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
@@ -74,6 +77,8 @@ rdrs_ncdf_aggregator(ncdir = getwd(),
 		     gp_var = gp_var,
                      periodStartTime=periodStartTime,
                      aggregationFactor=aggregationFactor)
+
+## spatial aggregation and mask are necessarily not required for a Raven modelling practice. However, you may use these function to reduce a Raven input NetCDF file size and/or pre-processing forcing functions. 
 
 # spatial aggregation
 rdrs_spatial_aggregator(ncFile = "output/RavenInput.nc",
