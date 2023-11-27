@@ -168,6 +168,7 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
     dates<-start+time_steps
     id_first<-which(hour(dates_after_shift[1:24])-hour(hours(periodStartTime))==0)
     break_id<-c(1,seq(id_first,length(dates_after_shift),aggregationLength))
+    break_id<-break_id[!duplicated(break_id)]
     break_groups<-c()
     for(i in 1:length(break_id))  break_groups<-c(break_groups,rep(i,ifelse(length(break_id)==i,length(dates_after_shift)-break_id[i]+1,break_id[i+1]-break_id[i])))
     grouped_hourly_dates<-split(dates_after_shift,break_groups)
