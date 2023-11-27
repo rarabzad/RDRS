@@ -290,6 +290,35 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   }
   writeLines(text = capture.output(ncnew),
              con = file.path(file.path(outdir), paste0(gsub(".nc","",outputfile),"_content.txt")))
+  variableBlocks<-c(":GriddedForcing \t\t\t RavenVarName\n",
+                    "\t:ForcingType \t\t\t RavenForcingType\n",
+                    "\t:FileNameNC \t\t\t netcdf_path\n",
+                    "\t:VarNameNC \t\t\t var_name\n",
+                    "\t:DimNamesNC \t\t\t dims\n",
+                    "\t:ElevationVarNameNC \t\t gpe_var\n",
+                    "\t:RedirectToFile \t\t grid_weights_path\n",
+                    ":EndGriddedForcing\n")
+  rvt<-c()
+  for(i in 1:(length(vars)-2))
+  {
+    variableBlocks_tmp<-variableBlocks
+    variableBlocks_tmp<-gsub("netcdf_path",outputfile,variableBlocks_tmp)
+    variableBlocks_tmp<-gsub("var_name",vars[[i+2]]$name,variableBlocks_tmp)
+    if(gp_var != "")
+    {
+      variableBlocks_tmp<-gsub("gpe_var","Geopotential_Elevation",variableBlocks_tmp)
+    }else{
+      variableBlocks_tmp<-variableBlocks_tmp[-grep("gpe_var",variableBlocks_tmp)]
+    }
+    dimNames<-c()
+    for(j in 1:length(vars[[2+i]]$dim)) dimNames<-c(dimNames,vars[[2+i]]$dim[[j]]$name)
+    dimNames<-paste(dimNames,collapse = " ")
+    variableBlocks_tmp<-gsub("dims",dimNames,variableBlocks_tmp)
+    rvt<-c(rvt,variableBlocks_tmp)
+  }
+  writeLines(text = rvt,
+             con = file.path(file.path(outdir), "model.rvt"))
+  
   nc_close(ncnew)
   cat(paste("DONE: all output files are stored at:\n",outdir))
 }
