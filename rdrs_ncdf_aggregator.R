@@ -290,13 +290,13 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   }
   writeLines(text = capture.output(ncnew),
              con = file.path(file.path(outdir), paste0(gsub(".nc","",outputfile),"_content.txt")))
-  variableBlocks<-c(":GriddedForcing \t\t\t RavenVarName\n",
-                    "\t:ForcingType \t\t\t RavenForcingType\n",
-                    "\t:FileNameNC \t\t\t netcdf_path\n",
-                    "\t:VarNameNC \t\t\t var_name\n",
-                    "\t:DimNamesNC \t\t\t dims\n",
-                    "\t:ElevationVarNameNC \t\t gpe_var\n",
-                    "\t:RedirectToFile \t\t grid_weights_path\n",
+  variableBlocks<-c(":GriddedForcing \t\t\t RavenVarName",
+                    "\t:ForcingType \t\t\t RavenForcingType",
+                    "\t:FileNameNC \t\t\t netcdf_path",
+                    "\t:VarNameNC \t\t\t var_name",
+                    "\t:DimNamesNC \t\t\t dims",
+                    "\t:ElevationVarNameNC \t\t gpe_var",
+                    "\t:RedirectToFile \t\t grid_weights_path",
                     ":EndGriddedForcing\n")
   rvt<-c()
   for(i in 1:(length(vars)-2))
