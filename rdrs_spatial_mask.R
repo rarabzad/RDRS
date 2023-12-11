@@ -39,7 +39,7 @@ rdrs_spatial_mask<-function(ncFile,
   if(is.na(crs(boundary))) stop("provided mask file has no projection system!")
   nc<-nc_open(ncFile)
   boundary<-spTransform(boundary,crs("+proj=aea +lat_0=40 +lon_0=-96 +lat_1=50 +lat_2=70 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")) 
-  boundary_buffered<-st_union(st_buffer(st_as_sf(boundary),dist = 5000)) # half of rdrs grid cell sizes
+  boundary_buffered<-st_union(st_buffer(st_as_sf(boundary),dist = 6000)) # more than half of the rdrs grid cell sizes
   lat<-ncvar_get(nc,"lat")
   lon<-ncvar_get(nc,"lon")
   latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
