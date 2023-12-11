@@ -220,7 +220,7 @@ grids_weights_generator<-function(ncfile,
     unlink("master_grids",recursive = T)
     file.remove("master_grids.zip")
   }else{
-    HRU<-tryCatch(st_buffer(st_union(st_make_valid(st_as_sf(HRU))),dist = 5000), error = function(e){st_as_sf(gBuffer(as_Spatial(st_union(st_make_valid(st_as_sf(HRU)))),width =0.05))})
+    HRU<-st_buffer(st_union(st_make_valid(st_as_sf(HRU))),dist = 6000)
     latlon<-st_as_sf(data.frame(lon=c(lon),lat=c(lat)),
                      coords = c("lon", "lat"),
                      crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
