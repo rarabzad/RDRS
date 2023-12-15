@@ -206,17 +206,19 @@ grids_weights_generator<-function(ncfile,
   {
     download.file("https://github.com/rarabzad/RDRS/raw/main/master_grids.zip","master_grids.zip")
     unzip(zipfile = "master_grids.zip")
-    grids<-shapefile("master_grids/grids_polygons.shp")
+    grids<-st_read("master_grids/grids_polygons.shp")
     z<-matrix(1:prod(dim(lat))-1,nrow(lat),ncol(lat))
     xyz<-data.frame(x=c(lon),y=c(lat),z=c(z))
     xyz<-st_as_sf(xyz,
                   coords=c("x","y"),
                   crs = st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    grids<-st_set_crs(grids,crs(xyz))
     nlon <- dim(lon)[2]
     nlat <- dim(lat)[1]
-    centroids_grids_overlap<-which(st_intersects(st_as_sf(grids),xyz,sparse = F),arr.ind = T)
-    grids@data$Cell_ID[centroids_grids_overlap[,1]]<-xyz$z[centroids_grids_overlap[,2]]
+    centroids_grids_overlap<-which(st_intersects(grids,xyz,sparse = F),arr.ind = T)
+    grids$Cell_ID[centroids_grids_overlap[,1]]<-xyz$z[centroids_grids_overlap[,2]]
     grids<-grids[centroids_grids_overlap[,1],]
+    grids<-as_Spatial(grids)
     unlink("master_grids",recursive = T)
     file.remove("master_grids.zip")
   }else{
@@ -497,6 +499,7 @@ grids_weights_generator<-function(ncfile,
   writeOGR(latlonCentroids, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
   if(plot)
   {
+    pdf(file = file.path(outdir,"plot.pdf"))
     plot(grids,col="lightgrey")
     if(use_master_grids)
     {
@@ -504,9 +507,11 @@ grids_weights_generator<-function(ncfile,
     }else{
       spdf<-spTransform(spTransform(spdf,crs(HRU)),crs(spdf))
     }
-    points(spdf,pch=19,cex=0.4,col="orange")
+    plot(grids[weights_mat[,"Cell_#"]+1,],add=T,col="darkgrey")
+    points(spdf,pch=19,cex=0.5,col="orange")
     points(latlonCentroids,pch=19,cex=0.5,col="red")
-    lines(hru,col="white",lwd=2)
+    lines(hru,col="black",lwd=2)
+    text(x=coordinates(latlonCentroids)[,1],y=coordinates(latlonCentroids)[,2],labels=latlonCentroids$Cell_ID,col="white",cex=0.6)
     x_range <- par()$usr[1:2]
     y_range <- par()$usr[3:4]
     x_scale <- diff(x_range) / 5
@@ -525,6 +530,7 @@ grids_weights_generator<-function(ncfile,
            col=c("black","red","orange"),
            cex=c(.7,.7,.7),
            bty="n")
+    dev.off()
   }
   return(weights_mat)
   nc_close(nc)
