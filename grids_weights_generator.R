@@ -495,7 +495,7 @@ grids_weights_generator<-function(ncfile,
   writeOGR(grids, dsn=paste0(gsub("/","\\\\",outdir),"\\grids_polygons.json"), "GeoJSON", driver="GeoJSON",overwrite=TRUE)
   latlonCentroids<-xyz
   latlonCentroids<-as_Spatial(st_transform(st_transform(latlonCentroids,st_crs(HRU)),st_crs(latlonCentroids)))
-  if(!use_master_grids) latlonCentroids@data<-data.frame(Cell_ID=latlonCentroids@data$z)
+  latlonCentroids@data<-data.frame(Cell_ID=latlonCentroids@data$z)
   writeOGR(latlonCentroids, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
   if(plot)
   {
