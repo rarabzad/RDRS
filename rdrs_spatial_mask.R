@@ -65,6 +65,7 @@ rdrs_spatial_mask<-function(ncFile,
   lonRC<-lon[frameR,frameC,drop=F]
   vars<-names(nc$var)[grep("RDRS",names(nc$var))] #RDRS variables selection
   var_units<-c(); for(i in 1:length(vars)) var_units<-c(var_units,nc$var[[vars[i]]]$units)
+  var_longname<-c(); for(i in 1:length(vars)) var_longname<-c(var_longname,nc$var[[vars[i]]]$longname)
   varsData<-list()
   for(j in 1:length(vars))
   {
@@ -121,6 +122,7 @@ rdrs_spatial_mask<-function(ncFile,
                                units   = var_units[j] ,
                                dim     = var_dim,
                                missval = NaN,
+                               longname = var_longname[j],
                                prec    = "double")
   }
   if(is.na(ncFileOut))
