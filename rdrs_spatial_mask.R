@@ -26,11 +26,13 @@
 #' writeOGR(obj = hru,dsn = getwd(),layer = "hru",driver = "ESRI Shapefile",overwrite_layer = T)
 #' rdrs_spatial_mask(ncFile=list.files(pattern  = "*.nc")[1],
 #'                                     maskFile = "hru.shp",
-#'                                     ncFileOut = "masked_nc.nc")    
+#'                                     ncFileOut = "masked_nc.nc",
+#'                                     var=NULL)    
 #' @author Rezgar Arabzadeh, University of Waterloo, October 2023
 rdrs_spatial_mask<-function(ncFile,
                             maskFile,
-                            ncFileOut=NA)
+                            ncFileOut=NA,
+                            var=NULL)
 {
   if(!file.exists(ncFile))   stop("provided netcdf file doesn't exist!")
   if(!file.exists(maskFile)) stop("provided mask file doesn't exist!")
@@ -38,6 +40,17 @@ rdrs_spatial_mask<-function(ncFile,
   boundary<-shapefile(maskFile)
   if(is.na(crs(boundary))) stop("provided mask file has no projection system!")
   nc<-nc_open(ncFile)
+  vars<-names(nc$var)[grep("RDRS",names(nc$var))] #RDRS variables selection
+  if(!is.null(var))
+  {
+    if(all(!var %in% vars)) stop("wrong variables specified!")
+    if(any(!var %in% vars))
+    {
+      cat("The following variables are not available in the NetCDF file:\n")
+      cat(paste0(var[!var %in% vars],"\n"))
+    }
+    vars<-var[var %in% vars]
+  }
   boundary<-spTransform(boundary,crs("+proj=aea +lat_0=40 +lon_0=-96 +lat_1=50 +lat_2=70 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")) 
   boundary_buffered<-st_union(st_buffer(st_as_sf(boundary),dist = 10000)) # more than half of the rdrs grid cell sizes
   lat<-ncvar_get(nc,"lat")
@@ -63,7 +76,6 @@ rdrs_spatial_mask<-function(ncFile,
   maskRC<-ifelse(maskRC,1,NA)
   latRC<-lat[frameR,frameC,drop=F]
   lonRC<-lon[frameR,frameC,drop=F]
-  vars<-names(nc$var)[grep("RDRS",names(nc$var))] #RDRS variables selection
   var_units<-c(); for(i in 1:length(vars)) var_units<-c(var_units,nc$var[[vars[i]]]$units)
   var_longname<-c(); for(i in 1:length(vars)) var_longname<-c(var_longname,nc$var[[vars[i]]]$longname)
   varsData<-list()
@@ -85,6 +97,7 @@ rdrs_spatial_mask<-function(ncFile,
                       start = start,
                       count = count,collapse_degen = F)
     if(any(is.na(maskRC))) for(i in 1:dim(subset)[3])  subset[,,i]<-subset[,,i]*maskRC
+    if(vars[j]=="RDRS_v2.1_P_GZ_SFC" & length(dim(subset))==3) subset<-apply(subset,c(1,2),mean)
     varsData[[j]]<-subset
   }
   nlon <- nrow(lonRC)
@@ -116,7 +129,10 @@ rdrs_spatial_mask<-function(ncFile,
     {
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlon") var_dim[[i]]<-rlon_dim
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlat") var_dim[[i]]<-rlat_dim
-      if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
+      if(vars[j] != "RDRS_v2.1_P_GZ_SFC")
+      {
+        if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
+      }
     }
     ncVars[[2+j]] <- ncvar_def(name    = vars[j],
                                units   = var_units[j] ,
