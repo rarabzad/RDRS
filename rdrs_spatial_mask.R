@@ -97,7 +97,7 @@ rdrs_spatial_mask<-function(ncFile,
                       start = start,
                       count = count,collapse_degen = F)
     if(any(is.na(maskRC))) for(i in 1:dim(subset)[3])  subset[,,i]<-subset[,,i]*maskRC
-    if(vars[j]=="RDRS_v2.1_P_GZ_SFC" & length(dim(subset))==3) subset<-apply(subset,c(1,2),mean)
+    if(vars[j]=="RDRS_v2.1_P_GZ_09944" & length(dim(subset))==3) subset<-apply(subset,c(1,2),mean)
     varsData[[j]]<-subset
   }
   nlon <- nrow(lonRC)
@@ -129,7 +129,7 @@ rdrs_spatial_mask<-function(ncFile,
     {
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlon") var_dim[[i]]<-rlon_dim
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlat") var_dim[[i]]<-rlat_dim
-      if(vars[j] != "RDRS_v2.1_P_GZ_SFC")
+      if(vars[j] != "RDRS_v2.1_P_GZ_09944")
       {
         if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
       }
