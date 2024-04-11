@@ -62,8 +62,8 @@ periodStartTime<-0
 # Weights generation
 grids_weights_generator(ncfile = "2017010112.nc",
                         outdir = outdir,
-			hrufile = "./hru/finalcat_hru_info.shp",
-			HRU_ID = "HRU_ID")
+			hrufile = hrufile,
+			HRU_ID = HRU_ID)
 
 # Gridded Forcing aggregation
 rdrs_ncdf_aggregator(ncdir = getwd(),
