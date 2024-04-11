@@ -507,11 +507,20 @@ grids_weights_generator<-function(ncfile,
     }else{
       spdf<-spTransform(spTransform(spdf,crs(HRU)),crs(spdf))
     }
+    if(nrow(grids)<200)
+    {
+      points(spdf,pch=19,cex=0.5,col="orange")
+      points(latlonCentroids,pch=19,cex=0.5,col="red")
+      text(x=coordinates(latlonCentroids)[,1],y=coordinates(latlonCentroids)[,2],labels=latlonCentroids$Cell_ID,col="white",cex=0.6)
+      legend("topleft",
+             legend = c("grid","centroid","corner"),
+             pch=c(4,19,19),
+             col=c("black","red","orange"),
+             cex=c(.7,.7,.7),
+             bty="n")
+    }
     plot(grids[grids$Cell_ID %in% unique(weights_mat[,"Cell_#"]),],add=T,col="darkgrey")
-    points(spdf,pch=19,cex=0.5,col="orange")
-    points(latlonCentroids,pch=19,cex=0.5,col="red")
     lines(hru,col="black",lwd=2)
-    text(x=coordinates(latlonCentroids)[,1],y=coordinates(latlonCentroids)[,2],labels=latlonCentroids$Cell_ID,col="white",cex=0.6)
     x_range <- par()$usr[1:2]
     y_range <- par()$usr[3:4]
     x_scale <- diff(x_range) / 5
@@ -524,12 +533,6 @@ grids_weights_generator<-function(ncfile,
     mtext(round(ruler_y, 1), side = 2, at = ruler_y, line = 1, cex = 0.7,las=2)
     abline(v=ruler_x,col="green",lty=2)
     abline(h=ruler_y,col="green",lty=2)
-    legend("topleft",
-           legend = c("grid","centroid","corner"),
-           pch=c(4,19,19),
-           col=c("black","red","orange"),
-           cex=c(.7,.7,.7),
-           bty="n")
     dev.off()
   }
   return(weights_mat)
