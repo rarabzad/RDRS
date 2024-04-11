@@ -231,7 +231,8 @@ grids_weights_generator<-function(ncfile,
     mask<-matrix(st_contains(HRU, latlon,sparse = F),nrow(lat),ncol(lat))
     latlon<-st_transform(latlon,st_crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
     if(!any(mask)) stop("No overlap between the *.nc file and the provided hru file!")
-    id<-which(mask,arr.ind = TRUE)
+    #id<-which(mask,arr.ind = TRUE)
+    id<-cbind(row=1:nrow(mask),col=1:ncol(mask))
     flagSquare<-FALSE
     if(nrow(id)==1)
     {
