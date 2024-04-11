@@ -507,7 +507,7 @@ grids_weights_generator<-function(ncfile,
     }else{
       spdf<-spTransform(spTransform(spdf,crs(HRU)),crs(spdf))
     }
-    plot(grids[weights_mat[,"Cell_#"]+1,],add=T,col="darkgrey")
+    plot(grids[grids$Cell_ID %in% unique(weights_mat[,"Cell_#"]),],add=T,col="darkgrey")
     points(spdf,pch=19,cex=0.5,col="orange")
     points(latlonCentroids,pch=19,cex=0.5,col="red")
     lines(hru,col="black",lwd=2)
