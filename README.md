@@ -1,7 +1,7 @@
 This document goes through the steps to generate RDRSv2.1 grids weights as well as [RDRS](https://gwfnet.net/Metadata/Record/T-2020-05-28-S1OAQqWKCH0iS1tcdgjeveyQ) gridded forcing timeseries data aggregation.
 
 ## RDRS files processing
-In this section, two R functions will be called to generate the HRUs/RDRS grids cells intersection weights and grids frocing aggregation.
+In this section, multiple R functions will be called to generate the HRUs/RDRS grids cells intersection weights and grids frocing aggregation.
 
 ``` r
 # loading main functions
