@@ -40,7 +40,7 @@ rdrs_spatial_mask<-function(ncFile,
   boundary<-shapefile(maskFile)
   if(is.na(crs(boundary))) stop("provided mask file has no projection system!")
   nc<-nc_open(ncFile)
-  vars<-names(nc$var)[grep("RDRS",names(nc$var))] #RDRS variables selection
+  vars<-names(nc$var)[c(grep("RDRS",names(nc$var)),grep("Geopotential_Elevation",names(nc$var)))] #RDRS variables selection
   if(!is.null(var))
   {
     if(all(!var %in% vars)) stop("wrong variables specified!")
@@ -96,10 +96,18 @@ rdrs_spatial_mask<-function(ncFile,
                       varid = vars[j],
                       start = start,
                       count = count,collapse_degen = F)
-    if(any(is.na(maskRC))) for(i in 1:dim(subset)[3])  subset[,,i]<-subset[,,i]*maskRC
-    if(vars[j]=="RDRS_v2.1_P_GZ_09944" & length(dim(subset))==3)
+    if(any(is.na(maskRC)))
     {
-      subset<-apply(subset,c(1,2),mean)
+      if(length(start)>2)
+      {
+        for(i in 1:dim(subset)[3])  subset[,,i]<-subset[,,i]*maskRC
+      }else{
+        subset<-subset*maskRC
+      }
+    }
+    if(vars[j]=="RDRS_v2.1_P_GZ_09944")
+    {
+      if(length(dim(subset))==3) subset<-apply(subset,c(1,2),mean)
       geo2ele<-function(gph)  (gph*10*9.81)*6371000/(9.81*6371000-gph*10*9.81)
       subset<-geo2ele(subset)
     }
@@ -134,12 +142,12 @@ rdrs_spatial_mask<-function(ncFile,
     {
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlon") var_dim[[i]]<-rlon_dim
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlat") var_dim[[i]]<-rlat_dim
-      if(vars[j] != "RDRS_v2.1_P_GZ_09944")
+      if(any(vars[j] != c("RDRS_v2.1_P_GZ_09944","Geopotential_Elevation")))
       {
         if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
-        vars[j]<-"Geopotential_Elevation"
       }
     }
+    if(vars[j] == "RDRS_v2.1_P_GZ_09944") vars[j]<-"Geopotential_Elevation"
     ncVars[[2+j]] <- ncvar_def(name    = vars[j],
                                units   = var_units[j] ,
                                dim     = var_dim,
