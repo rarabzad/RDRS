@@ -97,7 +97,12 @@ rdrs_spatial_mask<-function(ncFile,
                       start = start,
                       count = count,collapse_degen = F)
     if(any(is.na(maskRC))) for(i in 1:dim(subset)[3])  subset[,,i]<-subset[,,i]*maskRC
-    if(vars[j]=="RDRS_v2.1_P_GZ_09944" & length(dim(subset))==3) subset<-apply(subset,c(1,2),mean)
+    if(vars[j]=="RDRS_v2.1_P_GZ_09944" & length(dim(subset))==3)
+    {
+      subset<-apply(subset,c(1,2),mean)
+      geo2ele<-function(gph)  (gph*10*9.81)*6371000/(9.81*6371000-gph*10*9.81)
+      subset<-geo2ele(subset)
+    }
     varsData[[j]]<-subset
   }
   nlon <- nrow(lonRC)
@@ -132,6 +137,7 @@ rdrs_spatial_mask<-function(ncFile,
       if(vars[j] != "RDRS_v2.1_P_GZ_09944")
       {
         if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
+        vars[j]<-"Geopotential_Elevation"
       }
     }
     ncVars[[2+j]] <- ncvar_def(name    = vars[j],
