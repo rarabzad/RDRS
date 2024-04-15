@@ -142,7 +142,7 @@ rdrs_spatial_mask<-function(ncFile,
     {
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlon") var_dim[[i]]<-rlon_dim
       if(nc$var[[vars[j]]]$dim[[i]]$name=="rlat") var_dim[[i]]<-rlat_dim
-      if(any(vars[j] != c("RDRS_v2.1_P_GZ_09944","Geopotential_Elevation")))
+      if(!any(vars[j] == c("RDRS_v2.1_P_GZ_09944","Geopotential_Elevation")))
       {
         if(nc$var[[vars[j]]]$dim[[i]]$name=="time") var_dim[[i]]<-time_dim
       }
