@@ -15,7 +15,6 @@ ifelse("devtools"       %in% rownames(installed.packages()),library(devtools),  
 ifelse("gissr"          %in% rownames(installed.packages()),library(gissr),         install_github  ("skgrange/gissr"))
 ifelse("lubridate"      %in% rownames(installed.packages()),library(lubridate),     install.packages("lubridate"))
 ifelse("progress"       %in% rownames(installed.packages()),library(progress),      install.packages("progress"))
-ifelse("rgdal"          %in% rownames(installed.packages()),library(rgdal),         install.packages("rgdal"))
 ifelse("raster"         %in% rownames(installed.packages()),library(raster),        install.packages("raster"))
 ifelse("Rcpp"           %in% rownames(installed.packages()),library(Rcpp),          install.packages("Rcpp"))
 ifelse("terra"          %in% rownames(installed.packages()),library(terra),         install.packages("terra"))
