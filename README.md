@@ -8,11 +8,9 @@ In this section, multiple R functions will be called to generate the HRUs/RDRS g
 # Loading required packages
 ifelse("remotes"        %in% rownames(installed.packages()),library(remotes),       install.packages("remotes"))
 ifelse("ncdf4"          %in% rownames(installed.packages()),library(ncdf4),         install.packages("ncdf4"))
-ifelse("rgeos"          %in% rownames(installed.packages()),library(rgeos),         remotes::install_version("rgeos", version = "0.6-4"))
 ifelse("sp"             %in% rownames(installed.packages()),library(sp),            install.packages("sp"))
 ifelse("sf"             %in% rownames(installed.packages()),library(sf),            install.packages("sf"))
 ifelse("devtools"       %in% rownames(installed.packages()),library(devtools),      install.packages("devtools"))
-ifelse("gissr"          %in% rownames(installed.packages()),library(gissr),         install_github  ("skgrange/gissr"))
 ifelse("lubridate"      %in% rownames(installed.packages()),library(lubridate),     install.packages("lubridate"))
 ifelse("progress"       %in% rownames(installed.packages()),library(progress),      install.packages("progress"))
 ifelse("raster"         %in% rownames(installed.packages()),library(raster),        install.packages("raster"))
