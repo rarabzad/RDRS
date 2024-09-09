@@ -23,14 +23,16 @@ ifelse("MatrixGenerics" %in% rownames(installed.packages()),library(MatrixGeneri
 dir.create("c:/rdrs")
 setwd("c:/rdrs")
 # loading RDRS function sets
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_aggregator.R")
-source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_mask.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/grids_weights_generator.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/rdrs_ncdf_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/rdrs_spatial_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/rdrs_spatial_mask.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/misc/gBuffer.R")
+source("https://raw.githubusercontent.com/rarabzad/RDRS/main/scripts/misc/sort_points.R")
 
 # download data
-download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
-download.file("https://github.com/rarabzad/RDRS/raw/main/hru.zip","hru.zip")
+download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
+download.file("https://github.com/rarabzad/RDRS/raw/main/data/hru.zip","hru.zip")
 unzip("data.zip")
 unzip("hru.zip")
 ncdir<-getwd()                         # directory where NetCDFs are stored
