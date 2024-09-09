@@ -22,7 +22,7 @@
 #' setwd("c:/rdrs")
 #' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncvar_add.R")
 #' # download data
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
 #' unzip("data.zip")
 #' ncfile<-list.files(getwd(),pattern="*.nc",full.name=TRUE)[1]  # location of the netcdf file
 #'nc<-nc_open(ncfile)
