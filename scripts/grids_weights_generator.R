@@ -39,8 +39,8 @@
 #' setwd("c:/rdrs")
 #' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
 #' # download data
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/hru.zip","hru.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/hru.zip","hru.zip")
 #' unzip("data.zip")
 #' unzip("hru.zip")
 #' outdir<-paste0(getwd(),"/output/")     # output directory
@@ -203,7 +203,7 @@ grids_weights_generator<-function(ncfile,
   cat("creating buffer around the HRU file...\n")
   if(use_master_grids)
   {
-    download.file("https://github.com/rarabzad/RDRS/raw/main/master_grids.zip","master_grids.zip")
+    download.file("https://github.com/rarabzad/RDRS/raw/main/data/master_grids.zip","master_grids.zip")
     unzip(zipfile = "master_grids.zip")
     grids<-st_read("master_grids/grids_polygons.shp")
     z<-matrix(1:prod(dim(lat))-1,nrow(lat),ncol(lat))
