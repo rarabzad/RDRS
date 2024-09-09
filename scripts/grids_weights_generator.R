@@ -48,9 +48,9 @@
 #' ncfile<-list.files(getwd(),pattern="*.nc",full.name=TRUE)[1]  # location of the netcdf file
 #' HRU_ID<-"HRU_ID"                       # the name of attribute table column of the HRUs
 #' grids_weights_generator(ncfile = ncfile,
-#' 			hrufile = hrufile,
+#' 			                   hrufile = hrufile,
 #'                         outdir = outdir,
-#' 			HRU_ID = HRU_ID,
+#' 			                   HRU_ID = HRU_ID,
 #'                         use_master_grids=FALSE,
 #'                         plot=TRUE)
 
@@ -507,7 +507,7 @@ grids_weights_generator<-function(ncfile,
     }else{
       spdf<-spTransform(spTransform(spdf,crs(HRU)),crs(spdf))
     }
-    if(nrow(grids)<200)
+    if(nrow(grids)<500)
     {
       points(spdf,pch=19,cex=0.5,col="orange")
       points(latlonCentroids,pch=19,cex=0.5,col="red")
@@ -520,7 +520,7 @@ grids_weights_generator<-function(ncfile,
              bty="n")
     }
     plot(grids[grids$Cell_ID %in% unique(weights_mat[,"Cell_#"]),],add=T,col="darkgrey")
-    lines(hru,col="black",lwd=2)
+    plot(hru,col = rgb(0.7, 0.5, 0.5, 0.5), border = "white", lwd = 0.1,add=T)
     x_range <- par()$usr[1:2]
     y_range <- par()$usr[3:4]
     x_scale <- diff(x_range) / 5
