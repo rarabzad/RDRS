@@ -22,7 +22,7 @@
 #' setwd("c:/rdrs")
 #' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_ncdf_aggregator.R")
 #' # download data
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
 #' unzip("data.zip")
 #' var<-c("RDRS_v2.1_A_PR0_SFC",          # variables to aggregate
 #'        "RDRS_v2.1_P_TT_1.5m",          # variables to aggregate
