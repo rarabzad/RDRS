@@ -84,16 +84,12 @@ rdrs_ncdf_aggregator(ncdir = getwd(),
 rdrs_spatial_aggregator(ncFile = "output/RavenInput.nc",
                         weightsFile = "output/weights.txt",
                         OutFile = "output/spatial_aggregated.csv")
-
 # spatial masking
 hru<-shapefile(hrufile)
 plot(hru)
 hru<-hru[hru$SubId == 11004375,] # a subset of the basin
 lines(hru,col="red",lwd=2)
-writeOGR(obj = hru,dsn = "output/",
-         layer = "hru",
-         driver = "ESRI Shapefile",
-         overwrite_layer = T)
+st_write(st_as_sf(hru), dsn = file.path("output", "hru.shp"), driver = "ESRI Shapefile", delete_layer = TRUE)
 rdrs_spatial_mask(ncFile = "output/RavenInput.nc",
                   maskFile ="output/hru.shp" ,
                   ncFileOut = "output/RavenInput_masked.nc")
