@@ -12,7 +12,7 @@
 #' setwd("c:/rdrs")
 #' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/rdrs_spatial_aggregator.R")
 #' # download data
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
 #' unzip("data.zip")
 #' ncFile<-list.files(pattern="*.nc")[1]
 #' rdrs_spatial_aggregator(ncFile=ncFile)
