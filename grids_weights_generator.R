@@ -29,12 +29,11 @@
 #' @importFrom raster crs shapefile aggregate crs intersect area
 #' @importFrom rgeos gbuffer
 #' @importFrom ncdf4 nc_open 
-#' @importFrom rgdal writeOGR 
 #' @importFrom sp SpatialPointsDataFrame CRS spTransform
 #' @importFrom graphics points lines legend
 #' @importFrom gissr sort_points
 #' @importFrom Hmisc approxExtrap
-#' @importFrom sf st_buffer st_union st_make_valid st_make_valid st_as_sf st_transform st_contains as_Spatial st_zm st_sf st_cast st_combine st_drop_geometry st_intersects
+#' @importFrom sf st_write st_buffer st_union st_make_valid st_make_valid st_as_sf st_transform st_contains as_Spatial st_zm st_sf st_cast st_combine st_drop_geometry st_intersects
 #' @examples
 #' dir.create("c:/rdrs")
 #' setwd("c:/rdrs")
@@ -492,12 +491,12 @@ grids_weights_generator<-function(ncfile,
   grids<-spTransform(grids,crs(HRU))
   hru<-spTransform(hru,crs(HRU))
   if(!use_master_grids) grids@data<-data.frame(Cell_ID=grids@data$Group.1)
-  writeOGR(grids, dsn=outdir, layer="grids_polygons", driver="ESRI Shapefile",overwrite=TRUE)
-  writeOGR(grids, dsn=paste0(gsub("/","\\\\",outdir),"\\grids_polygons.json"), "GeoJSON", driver="GeoJSON",overwrite=TRUE)
+  st_write(st_as_sf(grids), dsn=file.path(outdir, "grids_polygons.shp"), driver="ESRI Shapefile", delete_layer = TRUE)
+  st_write(st_as_sf(grids), dsn=file.path(outdir, "grids_polygons.json"), driver="GeoJSON", delete_layer = TRUE)
   latlonCentroids<-xyz
   latlonCentroids<-as_Spatial(st_transform(st_transform(latlonCentroids,st_crs(HRU)),st_crs(latlonCentroids)))
   latlonCentroids@data<-data.frame(Cell_ID=latlonCentroids@data$z)
-  writeOGR(latlonCentroids, dsn=outdir, layer="grids_centroids", driver="ESRI Shapefile",overwrite=TRUE)
+  st_write(st_as_sf(latlonCentroids), dsn=file.path(outdir, "grids_centroids.shp"), driver="ESRI Shapefile", delete_layer = TRUE)
   if(plot)
   {
     pdf(file = file.path(outdir,"plot.pdf"))
