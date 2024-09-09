@@ -16,8 +16,8 @@
 #' setwd("c:/rdrs")
 #' source("https://raw.githubusercontent.com/rarabzad/RDRS/main/grids_weights_generator.R")
 #' # download data
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/data.zip","data.zip")
-#' download.file("https://github.com/rarabzad/RDRS/raw/main/hru.zip","hru.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/data.zip","data.zip")
+#' download.file("https://github.com/rarabzad/RDRS/raw/main/data/hru.zip","hru.zip")
 #' unzip("data.zip")
 #' unzip("hru.zip")
 #' hru<-raster::shapefile("hru/finalcat_hru_info.shp")
