@@ -192,7 +192,7 @@ grids_weights_generator<-function(ncfile,
   cat("reading files...\n")
   if(!file.exists(ncfile))  stop("The provided file path doesn't exist!")
   if(!file.exists(hrufile)) stop("The provided file path doesn't exist!")
-  HRU<-hru<-tryCatch({shapefile(hrufile)}, error = function(e){shapefile(hrufile)})
+  HRU<-hru<-tryCatch({as_Spatial(st_read(hrufile))}, error = function(e){as_Spatial(st_read(hrufile))})
   if(!(HRU_ID %in% colnames(HRU@data))) stop("The provided 'HRU_ID' doesn't exist in the 'hrufile' attributes!")
   if(is.na(crs(HRU))) stop("The provided shapefile's CRS is missing!")
   HRU<-spTransform(x = HRU,CRSobj = crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
