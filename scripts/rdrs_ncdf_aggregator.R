@@ -210,10 +210,13 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
                             length(unique(currentFiles))))
         for(j in 1:length(unique(currentFiles)))
         {
-          nc_j<-nc_open(filename = unique(currentFiles)[j])
-          currentVal<-ncvar_get(nc_j,currentVar,
-                                start=c(1,1,min(currentLayers)),
-                                count=c(length(nc$dim$rlon$vals),length(nc$dim$rlat$vals),length(currentLayers)),collapse_degen = F)
+           nc_j<-nc_open(filename = unique(currentFiles)[j])
+           start <- c(1,1,min(currentLayers[unique(currentFiles)[j] == currentFiles]))
+           count <- c(length(nc$dim$rlon$vals),length(nc$dim$rlat$vals),max(currentLayers[unique(currentFiles)[j] == currentFiles])-start[3]+1)
+           currentVal<-ncvar_get(nc_j,currentVar,
+                                 start = start,
+                                 count = count,
+                                 collapse_degen = F)
           for(l in 1:length(currentVarId))
           {
             if(fun[currentVarId[l]]=="sum")  val.tmp[,,l,j]<-rowSums (currentVal[,,,drop=F], dims=2)
