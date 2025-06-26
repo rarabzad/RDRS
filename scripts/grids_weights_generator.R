@@ -31,7 +31,7 @@
 #' @importFrom ncdf4 nc_open 
 #' @importFrom sp SpatialPointsDataFrame CRS spTransform
 #' @importFrom graphics points lines legend
-#' @importFrom gissr sort_points
+#' @importFrom gissr sort_points #retired packages -> the function has be deposited in the misc folder for ease installation (no installation required)
 #' @importFrom Hmisc approxExtrap
 #' @importFrom sf st_write st_buffer st_union st_make_valid st_make_valid st_as_sf st_transform st_contains as_Spatial st_zm st_sf st_cast st_combine st_drop_geometry st_intersects
 #' @examples
