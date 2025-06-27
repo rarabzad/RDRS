@@ -117,12 +117,6 @@ shiny::runApp()
 
 ---
 
-## 📄 License
-
-MIT License. See `LICENSE.md` for details.
-
----
-
 ## 🙋 Need Help?
 
 If you're having trouble running the app locally or have a dataset question, feel free to open an issue or start a discussion on the GitHub repository.
