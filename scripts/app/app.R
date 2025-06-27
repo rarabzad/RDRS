@@ -1,3 +1,26 @@
+required_packages <- c(
+  "shiny", "leaflet", "sf", "DT", "shinyWidgets", "zip", "shinyjs",
+  "ncdf4", "geosphere", "dplyr", "sp", "lwgeom", "rmapshaper"
+)
+
+install_log <- ""
+
+for (pkg in required_packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install_log <- paste0(install_log, Sys.time(), " — Installing missing package: ", pkg, "\n")
+    tryCatch({
+      install.packages(pkg, repos = "https://cloud.r-project.org")
+      install_log <- paste0(install_log, Sys.time(), " — ✅ Successfully installed: ", pkg, "\n")
+    }, error = function(e) {
+      install_log <- paste0(install_log, Sys.time(), " — ❌ Failed to install ", pkg, ": ", e$message, "\n")
+    })
+  }
+}
+
+if (install_log == "") {
+  install_log <- paste0(Sys.time(), " — ✅ All required packages are already installed.\n")
+}
+
 library(shiny)
 library(leaflet)
 library(sf)
@@ -12,9 +35,11 @@ library(sp)
 library(lwgeom)
 library(rmapshaper)
 
-setwd(dirname(sys.frame(1)$ofile %||% "."))  # for interactive + deployed use
+setwd(if (!is.null(sys.frame(1)$ofile)) dirname(sys.frame(1)$ofile) else ".")
 source("https://raw.githubusercontent.com/rarabzad/RDRS/refs/heads/main/scripts/app/grids_weights_generator.R")
 options(shiny.maxRequestSize = 50 * 1024^2)  # 100 MB
+initial_log <- install_log
+
 ui <- fluidPage(
   useShinyjs(),
   titlePanel("Grid Weights Generator"),
@@ -56,7 +81,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  log_data <- reactiveVal("Log initialized.\n")
+  log_data <- reactiveVal(initial_log)
   shp_path_r <- reactiveVal(NULL)  # Store path of extracted .shp file
   zip_path <- reactiveVal(NULL)
   result_data <- reactiveVal(NULL)
@@ -107,7 +132,7 @@ server <- function(input, output, session) {
                      selected = selected_vars,
                      multiple = TRUE,
                      options = list(maxItems = 2))
-  })
+    })
     
     output$dim_select <- renderUI({
       req(nc_data())
@@ -150,7 +175,7 @@ server <- function(input, output, session) {
     
     shp_data(shp_data_tmp)  # assign to reactiveVal
     
-
+    
     # populate HRU_ID select input dynamically
     output$hru_select <- renderUI({
       req(shp_data())
@@ -166,91 +191,97 @@ server <- function(input, output, session) {
   observeEvent(input$generate, {
     req(input$ncfile, shp_path_r(), input$hru_id)
     shinyjs::html("waiting_msg", "⏳ Please wait ...")
-    # Create temporary output directory for generated files
+    
     outdir <- tempfile()
     dir.create(outdir)
-    
-    # Save current working directory and ensure restoration after processing
     owd <- setwd(outdir)
     on.exit(setwd(owd), add = TRUE)
     
     tryCatch({
-      # Run your grid weight generator function, get result list
-      res <- grids_weights_generator(
-        ncfile   = input$ncfile$datapath,
-        hrufile  = shp_path_r(),
-        varnames = input$varnames,
-        dimnames = input$dimnames,
-        HRU_ID   = input$hru_id,
-        plot     = TRUE
-      )
-      result_data(res)
-      output$map <- renderLeaflet({
-        req(input$show_map)
-        req(result_data())
-        leaflet() %>%
-          addTiles() %>%
-          addPolygons(data = res$grid_sf, color = "black", weight = 2, fillOpacity = 0.3) %>%
-          addPolygons(data = res$hru_sf, color = "red", weight = 0.5, fillOpacity = 0.3) %>%
-          addCircleMarkers(data = res$centroids, color = "blue", radius = 2)
+      withProgress(message = "Processing grid weights...", value = 0, {
+        incProgress(0.1, detail = "Running grids_weights_generator()...")
+        res <- grids_weights_generator(
+          ncfile   = input$ncfile$datapath,
+          hrufile  = shp_path_r(),
+          varnames = input$varnames,
+          dimnames = input$dimnames,
+          HRU_ID   = input$hru_id,
+          plot     = TRUE
+        )
+        incProgress(0.4, detail = "Generating leaflet map and writing shapefiles...")
+        result_data(res)
+        
+        output$map <- renderLeaflet({
+          req(input$show_map)
+          req(result_data())
+          leaflet() %>%
+            addTiles() %>%
+            addPolygons(data = res$grid_sf, color = "black", weight = 2, fillOpacity = 0.3) %>%
+            addPolygons(data = res$hru_sf, color = "red", weight = 0.5, fillOpacity = 0.3) %>%
+            addCircleMarkers(data = res$centroids, color = "blue", radius = 2)
+        })
+        
+        # Write outputs
+        grid_cells_shp_path <- file.path(outdir, "grid_cells.shp")
+        grid_cells_json_path <- file.path(outdir, "grid_cells.json")
+        hru_cells_shp_path <- file.path(outdir, "hru_cells.shp")
+        centroids_shp_path <- file.path(outdir, "centroids.shp")
+        weights_txt_path <- file.path(outdir, "weights.txt")
+        
+        sf::st_write(res$grid_sf, grid_cells_shp_path, delete_layer = TRUE, quiet = TRUE)
+        log_text(paste("✅ Shapefile written at:", grid_cells_shp_path))
+        incProgress(0.1)
+        
+        sf::st_write(res$grid_sf, grid_cells_json_path, driver="GeoJSON", delete_layer = TRUE, quiet = TRUE)
+        log_text(paste("✅ GeoJSON written at:", grid_cells_json_path))
+        incProgress(0.05)
+        
+        sf::st_write(res$hru_sf,  hru_cells_shp_path,  delete_layer = TRUE, quiet = TRUE)
+        sf::st_write(res$centroids, centroids_shp_path, delete_layer = TRUE, quiet = TRUE)
+        log_text(paste("✅ Centroids shapefile written at:", centroids_shp_path))
+        incProgress(0.1)
+        
+        writeLines(res$weights_txt, weights_txt_path)
+        log_text(paste("✅ Weights text file written at:", weights_txt_path))
+        incProgress(0.05)
+        
+        # Generate plot PDF if plot_path function is available
+        if (!is.null(res$plot_path) && is.function(res$plot_path)) {
+          pdf_path <- file.path(outdir, "plot.pdf")
+          res$plot_path(pdf_path)  # Call function to save plot to PDF file
+          log_text(paste("✅ Plot PDF created at:", pdf_path))
+          incProgress(0.05)
+        }
+        
+        # Zip shapefile components and other outputs
+        shapefile_bases <- c("grid_cells", "hru_cells", "centroids")
+        shapefile_extensions <- c(".shp", ".shx", ".dbf", ".prj", ".cpg")
+        
+        shapefile_files <- unlist(lapply(shapefile_bases, function(base) {
+          file.path(outdir, paste0(base, shapefile_extensions))
+        }))
+        shapefile_files <- shapefile_files[file.exists(shapefile_files)]
+        
+        extra_files <- c(file.path(outdir, "weights.txt"), file.path(outdir, "plot.pdf"), file.path(outdir, "grid_cells.json"))
+        extra_files <- extra_files[file.exists(extra_files)]
+        
+        files_to_zip <- c(shapefile_files, extra_files)
+        
+        # Normalize and relative paths for zip
+        outdir_norm <- normalizePath(outdir, winslash = "/")
+        files_norm <- normalizePath(files_to_zip, winslash = "/")
+        files_rel <- sub(paste0("^", outdir_norm, "/"), "", files_norm)
+        
+        zipfile <- file.path(tempdir(), "weights_output.zip")
+        
+        incProgress(0.1, detail = "Creating ZIP archive...")
+        zip::zip(zipfile, files = files_rel)
+        incProgress(0.1)
+        
+        zip_path(zipfile)
+        
+        log_text("✅ Weight calculation complete and ZIP archive created.")
       })
-      print("✅ Leaflet rendered.")
-      # Write outputs
-      grid_cells_shp_path <- file.path(outdir, "grid_cells.shp")
-      grid_cells_json_path <- file.path(outdir, "grid_cells.json")
-      hru_cells_shp_path <- file.path(outdir, "hru_cells.shp")
-      centroids_shp_path <- file.path(outdir, "centroids.shp")
-      weights_txt_path <- file.path(outdir, "weights.txt")
-      sf::st_write(res$grid_sf, grid_cells_shp_path, delete_layer = TRUE, quiet = TRUE)
-      log_text(paste("✅ Shapefile written at:", grid_cells_shp_path))
-      sf::st_write(res$grid_sf, grid_cells_json_path, driver="GeoJSON", delete_layer = TRUE, quiet = TRUE)
-      log_text(paste("✅ GeoJSON written at:", grid_cells_json_path))
-      sf::st_write(res$hru_sf,  hru_cells_shp_path,  delete_layer = TRUE, quiet = TRUE)
-      sf::st_write(res$centroids, file.path(outdir, "centroids.shp"), delete_layer = TRUE, quiet = TRUE)
-      log_text(paste("✅ Centroids shapefile written at:", centroids_shp_path))
-      writeLines(res$weights_txt, weights_txt_path)
-      log_text(paste("✅ Weights text file written at:", weights_txt_path))
-      # Generate plot PDF if plot_path function is available
-      if (!is.null(res$plot_path) && is.function(res$plot_path)) {
-        pdf_path <- file.path(outdir, "plot.pdf")
-        res$plot_path(pdf_path)  # Call function to save plot to PDF file
-        log_text(paste("✅ Plot PDF created at:", pdf_path))
-      }
-      
-      # Now gather all shapefile components (*.shp, *.shx, *.dbf, *.prj, *.cpg) for all shapefiles
-      shapefile_bases <- c("grid_cells", "hru_cells", "centroids")
-      shapefile_extensions <- c(".shp", ".shx", ".dbf", ".prj", ".cpg")
-      
-      shapefile_files <- unlist(lapply(shapefile_bases, function(base) {
-        file.path(outdir, paste0(base, shapefile_extensions))
-      }))
-      
-      # Keep only existing files (some shapefile components may not exist)
-      shapefile_files <- shapefile_files[file.exists(shapefile_files)]
-      
-      # Include extra output files if they exist
-      extra_files <- c(file.path(outdir, "weights.txt"), file.path(outdir, "plot.pdf"),file.path(outdir, "grid_cells.json"))
-      extra_files <- extra_files[file.exists(extra_files)]
-      
-      files_to_zip <- c(shapefile_files, extra_files)
-      
-      # Normalize outdir path with forward slashes for Windows
-      outdir_norm <- normalizePath(outdir, winslash = "/")
-      files_norm <- normalizePath(files_to_zip, winslash = "/")
-      
-      # Make file paths relative to outdir to avoid colon issues on Windows
-      files_rel <- sub(paste0("^", outdir_norm, "/"), "", files_norm)
-      
-      # Define the zip file path
-      zipfile <- file.path(tempdir(), "weights_output.zip")
-      
-      # Create the zip archive with relative paths inside outdir
-      zip::zip(zipfile, files = files_rel)
-      
-      # Store zip path in reactive for download
-      zip_path(zipfile)
-      
-      log_text("✅ Weight calculation complete and ZIP archive created.")
     }, error = function(e) {
       log_text(paste0("❌ Error during processing: ", e$message))
     })
