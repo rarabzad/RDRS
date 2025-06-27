@@ -6,50 +6,61 @@ This Shiny web application allows users to **intersect NetCDF grid data with HRU
 
 ## 📦 Features
 
-- Upload NetCDF file (`.nc`) with 2D latitude/longitude grids.
-- Upload HRU shapefile (`.zip`) with polygon features.
-- Select variables and dimensions interactively from NetCDF file.
-- Choose the attribute in the shapefile to use as HRU ID.
-- Generate:
-  - Intersected grid polygons
-  - HRU boundaries
-  - Grid centroids
-  - Area-based weights for each HRU–grid pair
-- Download all results in a single ZIP file.
-- Optional: visualize the grid and HRU overlay on an interactive Leaflet map.
-- Automatically checks for and installs missing R packages on first run.
+* Upload NetCDF file (`.nc`) with 2D latitude/longitude grids.
+* Upload HRU shapefile (`.zip`) with polygon features.
+* Select variables and dimensions interactively from NetCDF file.
+* Choose the attribute in the shapefile to use as HRU ID.
+* Generate:
+
+  * Intersected grid polygons
+  * HRU boundaries
+  * Grid centroids
+  * Area-based weights for each HRU–grid pair
+* Download all results in a single ZIP file.
+* Optional: visualize the grid and HRU overlay on an interactive Leaflet map.
+* Automatically checks for and installs missing R packages on first run.
 
 ---
 
 ## 🖥️ How to Run Locally
 
-### 1. Prerequisites
+### 🔹 Simple Method (No Git Required)
 
-Make sure you have:
-- R installed (≥ 4.1 recommended)
-- RStudio (optional but recommended)
-- Internet connection (for downloading required packages and external script)
+If you're not familiar with Git or command line:
 
-### 2. Clone or Download This Repository
+1. Go to:
+   👉 [https://github.com/rarabzad/RDRS/tree/main/scripts/app](https://github.com/rarabzad/RDRS/tree/main/scripts/app)
+
+2. Click the green **`Code`** button (top right), then select **`Download ZIP`**
+
+3. After downloading:
+
+   * Extract the ZIP file
+   * Navigate into the folder:
+     `RDRS-main/scripts/app`
+
+4. Install [R](https://cran.r-project.org/) and [RStudio](https://posit.co/download/rstudio-desktop/) (if you haven’t already)
+
+5. Open **RStudio**, click **File → Open File...**, and select the `app.R` file inside that folder
+
+6. Click **Run App** (top-right of the RStudio window)
+
+> 💡 The app will automatically install missing R packages the first time you run it. Please be patient — it may take a few minutes depending on your internet speed.
+
+---
+
+### 🔹 Git Method
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo-name>.git
-cd <your-repo-name>
-````
+git clone https://github.com/rarabzad/RDRS.git
+cd RDRS/scripts/app
+```
 
-Or download the ZIP and extract it.
-
-### 3. Launch the App
-
-Open R or RStudio and set the working directory to the project folder.
-
-Then run:
+Then open `app.R` in RStudio or run:
 
 ```r
 shiny::runApp()
 ```
-
-> 💡 On first run, the app will automatically install all required packages. This might take a few minutes depending on your internet speed.
 
 ---
 
@@ -65,63 +76,60 @@ shiny::runApp()
 
 > 📝 You’ll be prompted to select:
 >
-> * Two variables representing **longitude and latitude** (e.g., `lon`, `lat`)
-> * Two **dimensions** that represent the spatial grid (e.g., `rlat`, `rlon`)
+> * Two variables representing **longitude and latitude**
+> * Two **dimensions** representing the grid (e.g., `rlat`, `rlon`)
 
 ### 2. HRU Shapefile (`.zip`)
 
-* Upload a zipped shapefile that contains:
+* Upload a zipped shapefile that includes:
 
-  * `.shp`, `.shx`, `.dbf`, and `.prj` files (minimum)
-* Make sure all files are inside the ZIP root (not in a folder)
-* The shapefile must contain polygon features, each representing an HRU
+  * `.shp`, `.shx`, `.dbf`, `.prj` (minimum required)
+* Files must be **at the root of the ZIP** (not inside a folder)
+* The shapefile should contain **polygon features** representing HRUs
 
-> 📝 You’ll be prompted to select:
->
-> * One column from the shapefile to serve as **HRU ID** (e.g., `SubId`)
+> 📝 You’ll be prompted to select one **attribute field** (e.g., `SubId`) to use as the HRU ID
 
 ---
 
-## 🎛️ Output Files (downloadable as ZIP)
+## 🎛️ Output Files (in Downloaded ZIP)
 
-* `grid_cells.shp` — Shapefile of NetCDF grid polygons
-* `hru_cells.shp` — Original HRU shapefile (used in processing)
-* `centroids.shp` — Grid cell centroids
-* `weights.txt` — Text file with HRU-to-grid cell weights
-* `grid_cells.json` — GeoJSON of grid polygons
-* `plot.pdf` — Optional plot saved as PDF (if plotting enabled)
+| File              | Description                             |
+| ----------------- | --------------------------------------- |
+| `grid_cells.shp`  | Shapefile of intersected NetCDF grid    |
+| `hru_cells.shp`   | Processed HRU polygons used in analysis |
+| `centroids.shp`   | Grid cell centroids                     |
+| `weights.txt`     | Area-weighted table of HRU–grid pairs   |
+| `grid_cells.json` | GeoJSON version of grid polygons        |
+| `plot.pdf`        | Optional visualization plot (PDF)       |
 
 ---
 
 ## 🗺️ Interface Overview
 
-| Component         | Description                                        |
-| ----------------- | -------------------------------------------------- |
-| NetCDF Upload     | Upload `.nc` file with spatial variables           |
-| Shapefile Upload  | Upload `.zip` with shapefile components            |
-| Select Variables  | Choose lon/lat variables from NetCDF               |
-| Select Dimensions | Choose grid dimension names (e.g., `rlat`, `rlon`) |
-| Select HRU Field  | Choose column in shapefile as HRU ID               |
-| Show Map          | Toggle interactive Leaflet map                     |
-| Download Results  | Get ZIP archive with all output layers             |
-| Log Output        | View processing messages and errors                |
+| Component         | Description                                   |
+| ----------------- | --------------------------------------------- |
+| NetCDF Upload     | Upload `.nc` file with spatial variables      |
+| Shapefile Upload  | Upload `.zip` with shapefile components       |
+| Select Variables  | Choose `lon` / `lat` variables from NetCDF    |
+| Select Dimensions | Choose grid dimensions (`rlat`, `rlon`, etc.) |
+| Select HRU Field  | Choose column in shapefile for HRU ID         |
+| Show Map          | Toggle interactive Leaflet map                |
+| Download Results  | Download ZIP with all outputs                 |
+| Log Output        | View real-time logs and error messages        |
 
 ---
 
 ## ⚠️ Notes
 
-* App supports up to 100 MB file upload.
-* Long processing time is expected (2–5 mins) for large shapefiles or grids.
-* Geometry validation is internally applied for intersections.
-* For best results, ensure the shapefile and NetCDF grid are in **compatible coordinate systems** (e.g., both in geographic lat-lon or reprojected appropriately).
+* Max upload size: **100 MB**
+* Long processing time (2–5 mins) expected for large inputs
+* Geometry validation is applied before intersection
+* Ensure spatial alignment between shapefile and NetCDF grid (e.g., both in geographic coordinates like WGS84)
 
 ---
 
 ## 🙋 Need Help?
 
-If you're having trouble running the app locally or have a dataset question, feel free to open an issue or start a discussion on the GitHub repository.
+If you're having issues or want to suggest improvements:
 
-Let me know if you'd like:
-- Me to prepare this as an actual file you can copy-paste.
-- A sample NetCDF file and shapefile to use as demo inputs.
-- Instructions for deploying it with Docker or any platform.
+* [Open an Issue](https://github.com/rarabzad/RDRS/issues)
