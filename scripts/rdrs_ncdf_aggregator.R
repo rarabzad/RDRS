@@ -3,15 +3,13 @@
 #' @description
 #' This function is designed for aggregating hourly RDRS NetCDF files.
 #' @param ncdir Directory where NetCDF files are located
-#' @param outdir Directory where the output NetCDF file will be saved
-#' @param outputfile The name of the output NetCDF file
-#' @param shift A time shift in hours
+#' @param time_shift A time shift in hours
 #' @param aggregationLength aggregation length in hour, i.e. 24 for aggregation to dailly scale and 168 for weekly scale
-#' @param var A vector of variable names to be aggregated (duplication is allowed)
+#' @param var A vector of variable names to be aggregated (duplication is allowed) if missing, all variables will be aggregated by mean function for all times
 #' @param var_units Units associated with the variables
 #' @param var_names Names for the variables in the output NetCDF file
 #' @param fun A vector specifying aggregation functions (sum, mean, min, max) corresponding for each variable
-#' @param gp_var the name of the Geoppotential height variable
+#' @param aggregate_gph logical. To aggregate the geopotential variable or not (across all times)
 #' @return a time aggregated NetCDF file saved in the \code{outputfile}
 #' @export rdrs_ncdf_aggregator
 #' @importFrom lubridate ymd_hms floor_date
@@ -49,59 +47,55 @@
 #'                      aggregationFactor=aggregationFactor,
 #' 		                  gp_var = gp_var)
 #' @author Rezgar Arabzadeh, University of Waterloo, Nov 2023
-rdrs_ncdf_aggregator<-function(ncdir=getwd(),
-                               outdir=paste0(ncdir,"/output"),
-                               outputfile="RavenInput.nc",
-                               shift=5,
+rdrs_ncdf_aggregator<-function(ncdir,
+                               time_shift=0,
                                aggregationLength=24,
-                               periodStartTime=0,
-                               var=c("RDRS_v2.1_A_PR0_SFC",
-                                     "RDRS_v2.1_P_TT_1.5m",
-                                     "RDRS_v2.1_P_TT_1.5m",
-                                     "RDRS_v2.1_P_TT_1.5m"),
-                               var_units=c("mm",
-                                           "degC",
-                                           "degC",
-                                           "degC"),
-                               fun=c("sum",
-                                     "mean",
-                                     "min",
-                                     "max"),
-                               aggregationFactor=c(1000,1,1,1),
-                               gp_var="RDRS_v2.1_P_GZ_SFC")
+                               var=NULL,
+                               var_units=NULL,
+                               fun="mean",
+                               aggregationFactor=1,
+                               aggregate_gph = F)
 {
+  if(aggregate_gph) gp_var<-"RDRS_v2.1_P_GZ_SFC" else gp_var<-""
+  outdir<-paste0(ncdir,"/output")
   if(!dir.exists(outdir)) dir.create(outdir)
   ncfiles<-list.files(ncdir,pattern = "\\d{8}12\\.nc$",full.names = T)
   if(length(ncfiles)==0) stop("No NetCDF files found in the 'ncdir'")
+  nc<-nc_open(ncfiles[1])
+  periodStartTime<-0
+  outputfile<-"RavenInput.nc"
   timestamps<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles)),"0000"),tz = "UTC")
   start_date <- min(timestamps)
   end_date <- max(timestamps)
   full_sequence <- seq(from = start_date, to = end_date, by = "day")
   missing_id<-is.na(match(full_sequence,timestamps))
+  if(is.null(var)) var<-names(nc$var)
+  var <- var[!grepl("lat",var) & !grepl("lon",var) & !grepl("rotated_pole",var) & !grepl("RDRS_v2.1_P_GZ_SFC",var)]
+  var_units<-unlist(lapply(var,function(v) nc$var[[v]]$units))
+  nvar<-length(var)
+  fun <- rep(fun, length.out = nvar)
+  aggregationFactor <- rep(aggregationFactor, length.out = nvar)
   var_names<-var
-  if(any(duplicated(var_names)))
-  {
-    var_names<-paste0(fun,"_",var_names)
-  }
+  if(any(duplicated(var_names))) var_names<-paste0(fun,"_",var_names)
   if(any(!seq_len(length(var)) %in% grep(pattern = "RDRS",var)))
   {
     warning(paste("the following non-RDRS variables are omitted!\n",
                   paste(var[!seq_len(length(var)) %in% grep(pattern = "RDRS",var)],collapse = "\n")))
   }
   if(length(var)<1) stop("No valid variable(s) provided to be aggregated!")
-  if(all(is.na(var_units)))
+  if(is.null(var_units))
   {
     var_units<-rep(NA,length(var))
     for(i in 1:length(var_units)) var_units[i]<-nc$var[[var[i]]]$units
     if(!all(aggregationFactor==1))
     {
       df_output <- capture.output(print(data.frame(var,var_units,aggregationFactor)))
+      aggregationFactor <- aggregationFactor * 0 + 1
       warning("The units of raw RDRS variables might be inaccurate if the 'aggregationFactor' is not set to 1. It is advisable to reassess the variable units after applying the 'aggregationFactor':\n", paste(df_output, collapse = "\n"))
     }
   }else{
     if(length(var_units)!=length(var)) stop("The lengths of the 'var_units' and 'var' variables are inconsistent!")
   }
-  nc<-nc_open(ncfiles[1])
   longnames<-rep(NA,length(var))
   for(i in 1:length(var)) longnames[i]<-paste0("[",aggregationLength," hours ",fun[i],"] ",nc$var[[var[i]]]$longname)
   all_vars<-c(var,gp_var)
@@ -161,8 +155,8 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
     end<-end_date+hours(23)
     time_step<-"hours"
     time_steps<-as.difftime(seq_along(seq(start,end,time_step))-1, units = time_step)
-    dates_after_shift<-start-hours(shift)
-    dates_after_shift_start_period<-start-hours(shift)-hours(periodStartTime)
+    dates_after_shift<-start-hours(time_shift)
+    dates_after_shift_start_period<-start-hours(time_shift)-hours(periodStartTime)
     dates_after_shift<-dates_after_shift+time_steps
     dates_after_shift_start_period<-dates_after_shift_start_period+time_steps
     dates<-start+time_steps
@@ -236,7 +230,6 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
         pb$tick()
       }
     }
-    
     for(i in 1:length(var))
     {
       vars[[2+i]] <- ncvar_def(name = var_names[i],
@@ -291,6 +284,16 @@ rdrs_ncdf_aggregator<-function(ncdir=getwd(),
   {
     ncvar_put( ncnew, vars[[length(vars)]], gpe, start=c(1,1), count=dim(gpe))
   }
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "title",        attval = "Aggregated RDRS variables")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "summary",      attval = "Aggregated spatiotemporal NetCDF from hourly RDRS v2.1 files to coarser time steps using custom R script.")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "script_creator", attval = "Rezgar Arabzadeh")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "creator_email",attval = "rarabzad@uwaterloo.ca")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "institution",  attval = "University of Waterloo")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "created_with", attval = "rdrs_ncdf_aggregator R script (v2.0)")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "script_references",   attval = "https://github.com/rarabzad/RDRS")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "created_on",   attval = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"))
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "data_source",       attval = "Environment and Climate Change Canada, RDRS v2.1")
+  ncdf4::ncatt_put(ncnew, varid = 0, attname = "history",      attval = paste("Aggregated from hourly to", aggregationLength, "hour timestep on", format(Sys.time(), "%Y-%m-%d")))
   writeLines(text = capture.output(ncnew),
              con = file.path(file.path(outdir), paste0(gsub(".nc","",outputfile),"_content.txt")))
   variableBlocks<-c(":GriddedForcing \t\t\t RavenVarName",
