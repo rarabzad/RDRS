@@ -8,7 +8,8 @@
 #' @param dimnames (optional)  character vector length-2 of NetCDF dimension names, required when shapefile is provided and \code{weightsFile} is missing.
 #' @param HRU_ID (optional)  the name of the hrufile polygon which contains the HRU IDs required when shapefile is provided and \code{weightsFile} is missing.
 #' @param OutFile The file path of the output ".csv" file to store the results
-#' @return a "csv" object saved in the specified pile path in the \code{OutFile}, if missing the file will be save at the same location of the netcdf file
+#' @return a \code{csv} object saved in the specified pile path in the \code{OutFile}, if missing the file will be save at the same location of the netcdf file
+#' @return a \code{list} object saved in the same location of the netcdf file
 #' @export rdrs_nc_spatial_aggregator
 #' @importFrom ncdf4 nc_open nc_close ncvar_get
 #' @examples
@@ -115,9 +116,11 @@ rdrs_spatial_aggregator<-function(ncFile,
     aggregated_data[[j]]<-mat
   }
   names(aggregated_data)<-vars
+  data_to_return<-aggregated_data
   aggregated_data<-do.call(cbind, aggregated_data)
   colnames(aggregated_data)<-apply(as.matrix(expand.grid(sprintf("(%s)",spatial_unit),vars)),1,paste, collapse = " ")
   write.csv(aggregated_data,OutFile)
   nc_close(nc)
+  return(data_to_return)
   cat(paste("output file is saved at:",OutFile,"\n"))
 }
